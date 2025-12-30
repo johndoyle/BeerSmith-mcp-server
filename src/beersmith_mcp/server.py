@@ -65,6 +65,258 @@ def list_recipes(folder: str | None = None, search: str | None = None) -> str:
 
 
 @mcp.tool()
+def search_recipes_by_ingredient(
+    ingredient_name: str,
+    ingredient_type: str = "any",
+) -> str:
+    """
+    Search for all recipes containing a specific ingredient.
+
+    Args:
+        ingredient_name: Name of the ingredient to search for (partial match supported)
+        ingredient_type: Type of ingredient - "grain", "hop", "yeast", "misc", or "any" (default)
+
+    Returns:
+        List of recipes using the specified ingredient with amounts
+    """
+    # Get all full recipes (need to parse them for ingredients)
+    all_summaries = parser.get_recipes()
+    matches = []
+
+    ingredient_lower = ingredient_name.lower()
+
+    for summary in all_summaries:
+        recipe = parser.get_recipe(summary.name)
+        if not recipe:
+            continue
+
+        found_ingredients = []
+
+        # Check grains
+        if ingredient_type in ("any", "grain"):
+            for grain in recipe.grains:
+                if ingredient_lower in grain.name.lower():
+                    found_ingredients.append(
+                        f"Grain: {grain.amount_kg:.3f} kg {grain.name}"
+                    )
+
+        # Check hops
+        if ingredient_type in ("any", "hop"):
+            for hop in recipe.hops:
+                if ingredient_lower in hop.name.lower():
+                    found_ingredients.append(
+                        f"Hop: {hop.amount_grams:.1f} g {hop.name} @ {hop.boil_time:.0f} min"
+                    )
+
+        # Check yeasts
+        if ingredient_type in ("any", "yeast"):
+            for yeast in recipe.yeasts:
+                if ingredient_lower in yeast.name.lower() or ingredient_lower in yeast.product_id.lower():
+                    found_ingredients.append(f"Yeast: {yeast.name} ({yeast.product_id})")
+
+        # Check misc
+        if ingredient_type in ("any", "misc"):
+            for misc in recipe.miscs:
+                if ingredient_lower in misc.name.lower():
+                    found_ingredients.append(f"Misc: {misc.amount:.3f} {misc.name}")
+
+        if found_ingredients:
+            matches.append({
+                "recipe": recipe.name,
+                "style": recipe.style.name if recipe.style else "No style",
+                "folder": recipe.folder,
+                "ingredients": found_ingredients,
+            })
+
+    if not matches:
+        return f"No recipes found containing '{ingredient_name}' (type: {ingredient_type})."
+
+    lines = [f"# Recipes containing '{ingredient_name}'\n"]
+    lines.append(f"Found {len(matches)} recipes:\n")
+
+    for match in sorted(matches, key=lambda m: m["recipe"]):
+        lines.append(f"## {match['recipe']}")
+        lines.append(f"*{match['style']}* | {match['folder']}")
+        for ing in match["ingredients"]:
+            lines.append(f"- {ing}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def list_recipes_with_ingredients(
+    folder: str | None = None,
+    search: str | None = None,
+) -> str:
+    """
+    List recipes with their grain bill and hop schedule included.
+
+    This provides more detail than list_recipes without fetching full recipes.
+
+    Args:
+        folder: Optional folder path to filter recipes
+        search: Optional search term to filter by recipe name
+
+    Returns:
+        Recipes with grain bills and hop schedules summarized
+    """
+    summaries = parser.get_recipes(folder=folder, search=search)
+
+    if not summaries:
+        return "No recipes found."
+
+    lines = ["# Recipes with Ingredients\n"]
+
+    for summary in summaries:
+        recipe = parser.get_recipe(summary.name)
+        if not recipe:
+            continue
+
+        lines.append(f"## {recipe.name}")
+        lines.append(
+            f"*{recipe.style.name if recipe.style else 'No style'}* | "
+            f"OG: {recipe.og:.3f} | IBU: {recipe.ibu:.0f} | ABV: {recipe.abv:.1f}%"
+        )
+
+        # Grain bill summary
+        if recipe.grains:
+            lines.append("**Grains:**")
+            for grain in sorted(recipe.grains, key=lambda g: g.percent, reverse=True):
+                lines.append(f"  - {grain.amount_kg:.3f} kg ({grain.percent:.0f}%) {grain.name}")
+
+        # Hop schedule summary
+        if recipe.hops:
+            lines.append("**Hops:**")
+            for hop in sorted(recipe.hops, key=lambda h: h.boil_time, reverse=True):
+                if hop.use == 1:  # Dry hop
+                    timing = f"Dry {hop.dry_hop_time:.0f}d"
+                else:
+                    timing = f"{hop.boil_time:.0f}m"
+                lines.append(f"  - {hop.amount_grams:.1f} g {hop.name} @ {timing}")
+
+        # Yeast (just name)
+        if recipe.yeasts:
+            yeast_names = ", ".join(y.name for y in recipe.yeasts)
+            lines.append(f"**Yeast:** {yeast_names}")
+
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def export_recipe_to_grocy(recipe_name: str) -> str:
+    """
+    Export a recipe in Grocy-compatible JSON format.
+
+    Returns structured JSON that can be used to create a recipe in Grocy,
+    with ingredients mapped to common Grocy product naming conventions.
+
+    Args:
+        recipe_name: Name or ID of the recipe to export
+
+    Returns:
+        JSON object with recipe data structured for Grocy import
+    """
+    recipe = parser.get_recipe(recipe_name)
+
+    if not recipe:
+        return f"Recipe '{recipe_name}' not found."
+
+    # Build Grocy-compatible recipe structure
+    grocy_recipe = {
+        "name": recipe.name,
+        "description": recipe.notes or "",
+        "base_servings": 1,  # One batch
+        "desired_servings": 1,
+        "picture_file_name": None,
+        "product_group": "Beer",
+        "type": "normal",
+        # Custom fields for brewing
+        "userfields": {
+            "style": recipe.style.name if recipe.style else "",
+            "og": round(recipe.og, 3),
+            "fg": round(recipe.fg, 3),
+            "ibu": round(recipe.ibu, 1),
+            "abv": round(recipe.abv, 1),
+            "color_srm": round(recipe.color_srm, 1),
+            "batch_size_liters": round(recipe.batch_size_liters, 1),
+            "boil_time_minutes": round(recipe.boil_time, 0),
+        },
+        "ingredients": [],
+    }
+
+    # Add grains as ingredients
+    for grain in recipe.grains:
+        grocy_recipe["ingredients"].append({
+            "product_name": grain.name,
+            "ingredient_group": "Grains",
+            "amount": round(grain.amount_kg * 1000, 1),  # Convert to grams
+            "quantity_unit": "g",
+            "note": f"{grain.percent:.0f}% of grain bill, {grain.color:.0f}°L",
+            # Suggested Grocy product matching fields
+            "beersmith_name": grain.name,
+            "search_terms": [
+                grain.name,
+                grain.name.replace(" Malt", ""),
+                grain.name.split()[0] if grain.name else "",
+            ],
+        })
+
+    # Add hops as ingredients
+    for hop in recipe.hops:
+        if hop.use == 1:  # Dry hop
+            timing = f"Dry hop {hop.dry_hop_time:.0f} days"
+        elif hop.use == 3:  # First wort
+            timing = "First Wort"
+        elif hop.use == 4:  # Whirlpool
+            timing = f"Whirlpool {hop.boil_time:.0f} min"
+        else:
+            timing = f"Boil {hop.boil_time:.0f} min"
+
+        grocy_recipe["ingredients"].append({
+            "product_name": hop.name,
+            "ingredient_group": "Hops",
+            "amount": round(hop.amount_grams, 1),
+            "quantity_unit": "g",
+            "note": f"{hop.alpha:.1f}% AA, {timing}",
+            "beersmith_name": hop.name,
+            "search_terms": [hop.name, f"{hop.name} Hops"],
+        })
+
+    # Add yeast as ingredient
+    for yeast in recipe.yeasts:
+        grocy_recipe["ingredients"].append({
+            "product_name": f"{yeast.lab} {yeast.product_id}",
+            "ingredient_group": "Yeast",
+            "amount": 1,
+            "quantity_unit": "pack",
+            "note": f"{yeast.name}, {yeast.type_name}, {yeast.min_attenuation:.0f}-{yeast.max_attenuation:.0f}% attenuation",
+            "beersmith_name": yeast.name,
+            "search_terms": [
+                yeast.name,
+                yeast.product_id,
+                f"{yeast.lab} {yeast.product_id}",
+            ],
+        })
+
+    # Add misc ingredients
+    for misc in recipe.miscs:
+        grocy_recipe["ingredients"].append({
+            "product_name": misc.name,
+            "ingredient_group": "Misc",
+            "amount": round(misc.amount, 3),
+            "quantity_unit": misc.type_name.lower(),  # Approximate unit
+            "note": f"Use: {misc.use_name}",
+            "beersmith_name": misc.name,
+            "search_terms": [misc.name],
+        })
+
+    return json.dumps(grocy_recipe, indent=2)
+
+
+@mcp.tool()
 def get_recipe(recipe_name: str) -> str:
     """
     Get full details of a specific recipe.
