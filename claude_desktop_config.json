@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "beersmith": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/Users/john/Development/BeerSmith MCP Server",
+        "run",
+        "beersmith-mcp"
+      ]
+    }
+  }
+}
