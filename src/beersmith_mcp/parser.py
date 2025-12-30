@@ -182,8 +182,11 @@ class BeerSmithParser:
                     items.append(item)
                 except Exception as e:
                     # Skip items that fail validation
-                    name = item_dict.get("f_h_name") or item_dict.get("f_g_name") or item_dict.get("f_y_name") or "unknown"
-                    print(f"Warning: Failed to parse {item_tag} '{name}': {e}")
+                    name = (item_dict.get("f_h_name") or item_dict.get("f_g_name") or 
+                           item_dict.get("f_y_name") or item_dict.get("f_e_name") or "unknown")
+                    # Always print validation errors for debugging
+                    import sys
+                    print(f"Warning: Failed to parse {item_tag} '{name}': {e}", file=sys.stderr)
 
         return items
 
@@ -337,11 +340,59 @@ class BeerSmithParser:
 
     def get_equipment_profiles(self) -> list[Equipment]:
         """Get all equipment profiles."""
+        # Clear cache to ensure we get fresh data (equipment may be updated frequently)
+        if "Equipment.bsmx" in self._cache:
+            del self._cache["Equipment.bsmx"]
+            
         root = self._parse_xml_file("Equipment.bsmx")
         if root is None:
             return []
 
         equipment = self._parse_items(root, "Equipment", Equipment)
+        
+        # BeerSmith's Equipment.bsmx sometimes has multiple root Equipment elements (invalid XML)
+        # We need to parse these separately. Read the file and look for all Equipment elements
+        try:
+            file_path = self._get_file_path("Equipment.bsmx")
+            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                content = f.read()
+            
+            # Find all top-level <Equipment>...</Equipment> blocks after the first one
+            import re
+            # Split by </Equipment> to find multiple roots
+            parts = content.split('</Equipment>')
+            
+            # Process parts after the first complete Equipment element
+            for i, part in enumerate(parts[1:], 1):  # Skip first (main root)
+                # Check if this part starts a new Equipment element
+                if '<Equipment>' in part:
+                    # Extract just this Equipment section
+                    eq_start = part.find('<Equipment>')
+                    eq_content = part[eq_start:]
+                    # Add closing tag if not present
+                    if '</Equipment>' not in eq_content:
+                        eq_content += parts[i+1].split('<')[0] + '</Equipment>' if i+1 < len(parts) else '</Equipment>'
+                    else:
+                        eq_content = eq_content.split('</Equipment>')[0] + '</Equipment>'
+                    
+                    # Try to parse this Equipment element
+                    try:
+                        parser_xml = etree.XMLParser(recover=True, encoding='utf-8')
+                        eq_root = etree.fromstring(eq_content.encode('utf-8'), parser=parser_xml)
+                        
+                        item_dict = self._element_to_dict(eq_root)
+                        if "f_e_name" in item_dict:
+                            item = Equipment.model_validate(item_dict)
+                            # Avoid duplicates
+                            if not any(e.name == item.name for e in equipment):
+                                equipment.append(item)
+                    except Exception as e:
+                        continue  # Skip malformed extra equipment
+        except Exception as e:
+            print(f"Warning: Could not parse additional equipment elements: {e}")
+        
+        return sorted(equipment, key=lambda e: e.name)
+        
         return sorted(equipment, key=lambda e: e.name)
 
     def get_equipment(self, name: str) -> Equipment | None:
