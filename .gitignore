@@ -1,1 +1,3 @@
 .venv/
+src/beersmith_mcp/__pycache__/
+src/beersmith_mcp/*.pyc

@@ -62,10 +62,10 @@ Add the BeerSmith MCP server to your Claude Desktop configuration:
 {
   "mcpServers": {
     "beersmith": {
-      "command": "uv",
+      "command": "/Users/john/.local/bin/uv",
       "args": [
         "--directory",
-        "/Users/USERNAME/Development/BeerSmith MCP Server",
+        "/Users/john/Development/BeerSmith MCP Server",
         "run",
         "beersmith-mcp"
       ]
@@ -73,6 +73,8 @@ Add the BeerSmith MCP server to your Claude Desktop configuration:
   }
 }
 ```
+
+**Note**: Use the full path to `uv` (check with `which uv`). Claude Desktop doesn't inherit your shell's PATH.
 
 ### With Grocy Integration
 
@@ -83,15 +85,19 @@ If you also have the Grocy MCP server, combine them:
   "mcpServers": {
     "grocy": {
       "command": "ssh",
-      "args": ["USERNAME@SERVERIP/HOST", "docker", "exec", "-i", "grocy-mcp-server", "node", "build/index.js"]
+      "args": ["USERNAME@SERVERIP", "docker", "exec", "-i", "grocy-mcp-server", "node", "build/index.js"]
     },
     "beersmith": {
-      "command": "uv",
+      "command": "/Users/USERNAME/.local/bin/uv",
       "args": ["--directory", "/Users/USERNAME/Development/BeerSmith MCP Server", "run", "beersmith-mcp"]
     }
   }
 }
 ```
+
+**Replace**:
+- `USERNAME` with your actual username
+- `SERVERIP` with your Grocy server IP
 
 **Important**: Restart Claude Desktop after updating the configuration.
 
@@ -643,8 +649,12 @@ uv run beersmith-mcp
 
 1. Check config file path: `~/Library/Application Support/Claude/claude_desktop_config.json`
 2. Verify JSON is valid (no trailing commas, proper quotes)
-3. Restart Claude Desktop completely
-4. Check Claude Desktop logs for errors
+3. **Use full path to `uv`**: Run `which uv` and use that path in config (e.g., `/Users/john/.local/bin/uv`)
+4. Restart Claude Desktop completely
+5. Check logs: `~/Library/Logs/Claude/mcp-server-beersmith.log`
+
+**Common Error**: "Failed to spawn process: No such file or directory"
+- Solution: Use full path to `uv` command in config (Claude doesn't inherit your shell PATH)
 
 ### Parser Errors
 

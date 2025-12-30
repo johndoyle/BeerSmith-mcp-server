@@ -505,13 +505,24 @@ class BeerSmithParser:
                 new_folder = f"{folder_path}{table_name}/"
                 recipes.extend(self._find_recipes_recursive(folder_data, new_folder))
 
-        # Check for Recipe elements directly
+        # Check for Recipe elements directly (local recipes)
         for recipe_elem in element.findall("Recipe"):
             recipe = self._parse_recipe_element(recipe_elem)
             if recipe:
                 if not recipe.folder or recipe.folder == "/":
                     recipe.folder = folder_path
                 recipes.append(recipe)
+
+        # Check for Cloud elements (cloud recipes)
+        for cloud_elem in element.findall("Cloud"):
+            # Cloud recipes have F_C_RECIPE sub-element with the actual recipe data
+            recipe_data = cloud_elem.find("F_C_RECIPE")
+            if recipe_data is not None:
+                recipe = self._parse_recipe_element(recipe_data)
+                if recipe:
+                    if not recipe.folder or recipe.folder == "/":
+                        recipe.folder = folder_path
+                    recipes.append(recipe)
 
         # Check in Data elements
         for data in element.findall("Data"):
@@ -520,12 +531,19 @@ class BeerSmithParser:
         return recipes
 
     def get_recipes(self, folder: str | None = None, search: str | None = None) -> list[RecipeSummary]:
-        """Get all recipes as summaries."""
+        """Get all recipes as summaries from both local and cloud storage."""
+        recipes = []
+        
+        # Load local recipes
         root = self._parse_xml_file("Recipe.bsmx")
-        if root is None:
-            return []
-
-        recipes = self._find_recipes_recursive(root)
+        if root is not None:
+            recipes.extend(self._find_recipes_recursive(root))
+        
+        # Load cloud recipes
+        cloud_root = self._parse_xml_file("Cloud.bsmx")
+        if cloud_root is not None:
+            cloud_recipes = self._find_recipes_recursive(cloud_root, folder_path="/Cloud/")
+            recipes.extend(cloud_recipes)
 
         # Filter by folder
         if folder:
@@ -557,12 +575,18 @@ class BeerSmithParser:
         return sorted(summaries, key=lambda r: (r.folder, r.name))
 
     def get_recipe(self, name_or_id: str) -> Recipe | None:
-        """Get a specific recipe by name or ID."""
+        """Get a specific recipe by name or ID from both local and cloud storage."""
+        recipes = []
+        
+        # Load local recipes
         root = self._parse_xml_file("Recipe.bsmx")
-        if root is None:
-            return None
-
-        recipes = self._find_recipes_recursive(root)
+        if root is not None:
+            recipes.extend(self._find_recipes_recursive(root))
+        
+        # Load cloud recipes
+        cloud_root = self._parse_xml_file("Cloud.bsmx")
+        if cloud_root is not None:
+            recipes.extend(self._find_recipes_recursive(cloud_root, folder_path="/Cloud/"))
         
         # Try exact match by ID first
         for recipe in recipes:

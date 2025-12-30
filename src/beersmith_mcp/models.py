@@ -26,6 +26,7 @@ class HopType(IntEnum):
     BITTERING = 0
     AROMA = 1
     BOTH = 2
+    WHIRLPOOL = 3  # Some recipes use this
 
 
 class HopForm(IntEnum):
@@ -35,6 +36,7 @@ class HopForm(IntEnum):
     PLUG = 1
     LEAF = 2
     EXTRACT = 3
+    CRYO = 4  # Cryogenic hops
 
 
 class HopUse(IntEnum):
@@ -142,6 +144,7 @@ class MiscUse(IntEnum):
     PRIMARY = 2
     SECONDARY = 3
     BOTTLING = 4
+    AGING = 5  # Used during aging/conditioning
 
 
 # === Unit Conversion Helpers ===

@@ -15,12 +15,14 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 {
   "mcpServers": {
     "beersmith": {
-      "command": "uv",
-      "args": ["--directory", "/Users/USERNAME/Development/BeerSmith MCP Server", "run", "beersmith-mcp"]
+      "command": "/Users/john/.local/bin/uv",
+      "args": ["--directory", "/Users/john/Development/BeerSmith MCP Server", "run", "beersmith-mcp"]
     }
   }
 }
 ```
+
+💡 **Tip**: Find your `uv` path with `which uv` and use the full path.
 
 **Restart Claude Desktop**
 
@@ -66,9 +68,11 @@ Try these with Claude:
 ## Common Issues
 
 **Server not showing in Claude?**
+- Use full path to `uv` (run `which uv`)
 - Check JSON syntax (no trailing commas!)
-- Restart Claude Desktop
-- Verify path in config
+- Restart Claude Desktop completely
+- Check logs: `~/Library/Logs/Claude/mcp-server-beersmith.log`
+- Test manually: `cd "/Users/john/Development/BeerSmith MCP Server" && /Users/john/.local/bin/uv run beersmith-mcp`
 
 **Recipe not found?**
 - Names are case-sensitive
