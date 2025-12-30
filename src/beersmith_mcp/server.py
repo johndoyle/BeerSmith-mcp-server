@@ -111,10 +111,10 @@ def get_recipe(recipe_name: str) -> str:
         total_weight = sum(g.amount_kg for g in recipe.grains)
         for grain in sorted(recipe.grains, key=lambda g: g.percent, reverse=True):
             lines.append(
-                f"- {grain.amount_kg:.2f} kg ({grain.percent:.1f}%) **{grain.name}** "
+                f"- {grain.amount_kg:.3f} kg ({grain.percent:.1f}%) **{grain.name}** "
                 f"[{grain.color:.0f}°L, {grain.type_name}]"
             )
-        lines.append(f"- **Total:** {total_weight:.2f} kg")
+        lines.append(f"- **Total:** {total_weight:.3f} kg")
 
     # Hops
     if recipe.hops:
@@ -125,7 +125,7 @@ def get_recipe(recipe_name: str) -> str:
             else:
                 timing = f"{hop.boil_time:.0f} min"
             lines.append(
-                f"- {hop.amount_grams:.0f} g **{hop.name}** ({hop.alpha:.1f}% AA) "
+                f"- {hop.amount_grams:.1f} g **{hop.name}** ({hop.alpha:.1f}% AA) "
                 f"@ {timing} [{hop.use_name}]"
             )
 
@@ -153,7 +153,7 @@ def get_recipe(recipe_name: str) -> str:
     if recipe.miscs:
         lines.append("\n## Other Ingredients")
         for misc in recipe.miscs:
-            lines.append(f"- {misc.amount:.2f} {misc.name} @ {misc.use_name}")
+            lines.append(f"- {misc.amount:.3f} {misc.name} @ {misc.use_name}")
 
     # Notes
     if recipe.notes:

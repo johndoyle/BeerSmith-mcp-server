@@ -225,7 +225,7 @@ class Hop(BeerSmithBase):
 
     @property
     def form_name(self) -> str:
-        names = ["Pellet", "Plug", "Leaf", "Extract"]
+        names = ["Pellet", "Plug", "Leaf", "Extract", "Cryo"]
         return names[self.form] if self.form < len(names) else "Other"
 
 
@@ -458,7 +458,7 @@ class RecipeMisc(Misc):
 
     @property
     def use_name(self) -> str:
-        return ["Boil", "Mash", "Primary", "Secondary", "Bottling"][self.use]
+        return ["Boil", "Mash", "Primary", "Secondary", "Bottling", "Aging"][self.use]
 
 
 # === Equipment Models ===
