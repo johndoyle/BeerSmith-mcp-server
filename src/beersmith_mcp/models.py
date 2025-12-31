@@ -217,6 +217,8 @@ class Hop(BeerSmithBase):
     type: HopType = Field(alias="f_h_type", default=HopType.BOTH)
     form: HopForm = Field(alias="f_h_form", default=HopForm.PELLET)
     hsi: float = Field(alias="f_h_hsi", default=25.0)  # Hop Storage Index
+    inventory: float = Field(alias="f_h_inventory", default=0.0)  # Amount in stock (oz)
+    price: float = Field(alias="f_h_price", default=0.0)  # Price per oz
     notes: str = Field(alias="f_h_notes", default="")
 
     @property
@@ -264,6 +266,8 @@ class Grain(BeerSmithBase):
     protein: float = Field(alias="f_g_protein", default=0.0)
     max_in_batch: float = Field(alias="f_g_max_in_batch", default=100.0)
     recommend_mash: bool = Field(alias="f_g_recommend_mash", default=False)
+    inventory: float = Field(alias="f_g_inventory", default=0.0)  # Amount in stock (oz)
+    price: float = Field(alias="f_g_price", default=0.0)  # Price per oz
     notes: str = Field(alias="f_g_notes", default="")
 
     @property
@@ -322,6 +326,8 @@ class Yeast(BeerSmithBase):
     tolerance: float = Field(alias="f_y_tolerance", default=10.0)  # ABV %
     best_for: str = Field(alias="f_y_best_for", default="")
     notes: str = Field(alias="f_y_notes", default="")
+    inventory: float = Field(alias="f_y_inventory", default=0.0)
+    price: float = Field(alias="f_y_price", default=0.0)
 
     @property
     def type_name(self) -> str:
@@ -441,6 +447,8 @@ class Misc(BeerSmithBase):
     type: MiscType = Field(alias="f_m_type", default=MiscType.OTHER)
     use_for: str = Field(alias="f_m_use_for", default="")
     notes: str = Field(alias="f_m_notes", default="")
+    inventory: float = Field(alias="f_m_inventory", default=0.0)
+    price: float = Field(alias="f_m_price", default=0.0)
 
     @property
     def type_name(self) -> str:

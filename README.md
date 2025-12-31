@@ -17,6 +17,7 @@ Beersmith 3 desktop, Apple Mac using Claude Desktop.   I also have Grocy MCP ser
 - **501 Yeast Strains**: Attenuation ranges, temperature profiles, flocculation
 - **202 BJCP Styles**: Complete style guidelines with OG/FG/IBU/SRM ranges
 - **50+ Water Profiles**: Famous brewing water chemistry profiles
+- **Price & Inventory Tracking**: Update costs and stock levels for all ingredients
 
 ### 🔧 Equipment Profiles
 - **Batch Size & Efficiency**: Access equipment settings for recipe scaling
@@ -409,6 +410,37 @@ Match ingredient names to BeerSmith database using fuzzy matching.
 - ❓ Low confidence (<60%)
 
 **Use Case**: Match Grocy inventory items to BeerSmith ingredients
+
+---
+
+#### `update_ingredient(ingredient_type, ingredient_name, updates_json)`
+Update an ingredient's properties in the BeerSmith database.
+
+**Parameters**:
+- `ingredient_type`: Type of ingredient - "grain", "hop", "yeast", or "misc"
+- `ingredient_name`: Exact name of the ingredient to update
+- `updates_json`: JSON object with fields to update
+
+**Example**:
+```json
+{
+  "price": 1.25,
+  "inventory": 10.5,
+  "supplier": "BSG Craft Brewing",
+  "notes": "Great base malt, excellent enzyme content"
+}
+```
+
+**Updatable Fields**:
+- **All Types**: `price`, `inventory`, `supplier`, `notes`
+- **Grains**: `origin`, `color`, `yield_pct`, `protein`, `max_in_batch`
+- **Hops**: `origin`, `alpha`, `beta`, `hsi` (hop storage index)
+- **Yeast**: `lab`, `product_id`, `min_temp_c`, `max_temp_c`, `attenuation`, `tolerance`
+- **Misc**: `use_for`, `type`
+
+**Returns**: Success message with updated fields or error details
+
+**Note**: Creates automatic backup before making changes
 
 ---
 

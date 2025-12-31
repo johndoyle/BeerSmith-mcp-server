@@ -874,10 +874,11 @@ def update_ingredient(
         updates_json: JSON string with fields to update. Example: '{"supplier": "BSG", "notes": "Great base malt"}'
                      
                      Common updatable fields:
-                     - For all: supplier, notes
+                     - For all: supplier, notes, inventory, price
                      - Grains: origin, color, yield_pct, protein, max_in_batch
                      - Hops: origin, alpha, beta, hsi (storage index)
                      - Yeast: lab, product_id, min_temp_c, max_temp_c, attenuation, tolerance
+                     - Misc: use_for, type
 
     Returns:
         Success message or error details

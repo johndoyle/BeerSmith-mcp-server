@@ -5,10 +5,16 @@ All notable changes to the BeerSmith MCP Server will be documented in this file.
 ## [1.1.0] - 2025-12-31
 
 ### Added
-- **3 New Tools** for enhanced workflow:
+- **4 New Tools** for enhanced workflow:
   - `search_recipes_by_ingredient`: Search all recipes containing a specific ingredient with amounts
   - `list_recipes_with_ingredients`: List recipes with grain bills and hop schedules without full fetch
   - `export_recipe_to_grocy`: Export recipes in Grocy-compatible JSON format with ingredient grouping
+  - `update_ingredient`: Modify ingredient properties including price, inventory, supplier, and technical specs
+- **Inventory and Price Tracking**: All ingredient models now support price and inventory fields
+  - Update costs per unit for grains, hops, yeast, and misc ingredients
+  - Track current inventory levels for better brewing planning
+  - Automatic backup creation before any database modifications
+  - Fields: `price` (cost per unit) and `inventory` (quantity on hand)
 - **Intelligent Ingredient Matching**: Fuzzy matching with suggestions when exact ingredient names don't match
   - Shows top 3 similar ingredients with confidence scores
   - Dramatically improves `create_recipe` user experience
