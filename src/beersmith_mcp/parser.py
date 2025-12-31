@@ -1072,6 +1072,123 @@ class BeerSmithParser:
         
         return True
 
+    def update_ingredient(self, ingredient_type: str, ingredient_name: str, updates: dict) -> bool:
+        """
+        Update an ingredient in BeerSmith's database.
+        
+        Args:
+            ingredient_type: Type of ingredient ('grain', 'hop', 'yeast', 'misc')
+            ingredient_name: Name of the ingredient to update
+            updates: Dictionary of field names and new values
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        # Map ingredient type to file and model
+        type_map = {
+            'grain': ('Grain.bsmx', 'Grain', Grain),
+            'hop': ('Hop.bsmx', 'Hop', Hop),
+            'yeast': ('Yeast.bsmx', 'Yeast', Yeast),
+            'misc': ('Misc.bsmx', 'Misc', Misc),
+        }
+        
+        if ingredient_type.lower() not in type_map:
+            raise ValueError(f"Invalid ingredient type: {ingredient_type}. Must be one of: grain, hop, yeast, misc")
+        
+        filename, tag_name, model_class = type_map[ingredient_type.lower()]
+        file_path = self._get_file_path(filename)
+        
+        if not file_path.exists():
+            raise FileNotFoundError(f"{filename} not found at {file_path}")
+        
+        # Create backup
+        self.backup_path.mkdir(exist_ok=True)
+        backup_file = self.backup_path / f"{filename.replace('.bsmx', '')}_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.bsmx"
+        shutil.copy2(file_path, backup_file)
+        
+        # Read the file
+        content = file_path.read_text(encoding="utf-8")
+        
+        # Parse XML to find the ingredient
+        from lxml import etree
+        parser = etree.XMLParser(recover=True, encoding='utf-8')
+        
+        # Split by root elements (multi-root XML)
+        import re
+        pattern = f'<{tag_name}>.*?</{tag_name}>'
+        matches = list(re.finditer(pattern, content, re.DOTALL))
+        
+        if not matches:
+            raise ValueError(f"No {tag_name} elements found in {filename}")
+        
+        # Find the ingredient by name
+        ingredient_found = False
+        updated_content = content
+        
+        for match in matches:
+            xml_chunk = match.group(0)
+            try:
+                root = etree.fromstring(xml_chunk.encode('utf-8'), parser=parser)
+                item_dict = self._element_to_dict(root)
+                item = model_class.model_validate(item_dict)
+                
+                # Check if this is the ingredient we're looking for
+                if item.name.lower() == ingredient_name.lower():
+                    ingredient_found = True
+                    
+                    # Apply updates to the XML
+                    updated_xml = self._update_xml_fields(xml_chunk, updates, model_class)
+                    updated_content = updated_content.replace(xml_chunk, updated_xml)
+                    break
+                    
+            except Exception:
+                continue
+        
+        if not ingredient_found:
+            raise ValueError(f"Ingredient '{ingredient_name}' not found in {filename}")
+        
+        # Write the updated content
+        file_path.write_text(updated_content, encoding="utf-8")
+        
+        # Clear cache
+        if filename in self._cache:
+            del self._cache[filename]
+        
+        return True
+    
+    def _update_xml_fields(self, xml_str: str, updates: dict, model_class) -> str:
+        """Update XML fields based on updates dictionary."""
+        # Get field aliases from the model
+        field_aliases = {}
+        for field_name, field_info in model_class.model_fields.items():
+            if hasattr(field_info, 'alias') and field_info.alias:
+                field_aliases[field_name] = field_info.alias.upper()
+        
+        updated_xml = xml_str
+        
+        for field_name, new_value in updates.items():
+            # Get the XML tag name from the alias
+            xml_tag = field_aliases.get(field_name)
+            if not xml_tag:
+                # Try using the field name directly as uppercase
+                xml_tag = f"F_{field_name.upper()}"
+            
+            # Escape the value if it's a string
+            if isinstance(new_value, str):
+                new_value = self._xml_escape(new_value)
+            elif isinstance(new_value, bool):
+                new_value = 1 if new_value else 0
+            elif isinstance(new_value, float):
+                new_value = f"{new_value:.7f}"
+            
+            # Replace the field value in XML
+            import re
+            pattern = f'<{xml_tag}>.*?</{xml_tag}>'
+            replacement = f'<{xml_tag}>{new_value}</{xml_tag}>'
+            updated_xml = re.sub(pattern, replacement, updated_xml, count=1)
+        
+        return updated_xml
+
     def export_recipe_beerxml(self, recipe: Recipe) -> str:
         """Export a recipe in BeerXML format."""
         # BeerXML 1.0 format

@@ -857,6 +857,57 @@ def get_yeast(yeast_name: str) -> str:
 
 
 @mcp.tool()
+def update_ingredient(
+    ingredient_type: str,
+    ingredient_name: str,
+    updates_json: str
+) -> str:
+    """
+    Update an ingredient in the BeerSmith database.
+    
+    This allows you to modify ingredient properties like price, supplier, notes, etc.
+    Creates a backup before making changes.
+
+    Args:
+        ingredient_type: Type of ingredient - must be one of: "grain", "hop", "yeast", "misc"
+        ingredient_name: Name of the ingredient to update (e.g., "Pilsner (2 Row) Ger")
+        updates_json: JSON string with fields to update. Example: '{"supplier": "BSG", "notes": "Great base malt"}'
+                     
+                     Common updatable fields:
+                     - For all: supplier, notes
+                     - Grains: origin, color, yield_pct, protein, max_in_batch
+                     - Hops: origin, alpha, beta, hsi (storage index)
+                     - Yeast: lab, product_id, min_temp_c, max_temp_c, attenuation, tolerance
+
+    Returns:
+        Success message or error details
+    """
+    try:
+        import json
+        updates = json.loads(updates_json)
+        
+        # Validate updates is a dictionary
+        if not isinstance(updates, dict):
+            return "Error: updates_json must be a JSON object (dictionary)"
+        
+        # Perform the update
+        success = parser.update_ingredient(ingredient_type, ingredient_name, updates)
+        
+        if success:
+            updated_fields = ", ".join(updates.keys())
+            return f"✅ Successfully updated {ingredient_name}\n\nUpdated fields: {updated_fields}\n\nA backup was created before making changes."
+        else:
+            return f"❌ Failed to update {ingredient_name}"
+            
+    except json.JSONDecodeError as e:
+        return f"Error: Invalid JSON in updates_json: {e}"
+    except ValueError as e:
+        return f"Error: {e}"
+    except Exception as e:
+        return f"Error updating ingredient: {e}"
+
+
+@mcp.tool()
 def list_water_profiles(search: str | None = None) -> str:
     """
     List available water profiles.
