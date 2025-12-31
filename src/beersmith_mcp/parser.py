@@ -90,6 +90,19 @@ class BeerSmithParser:
         self.backup_path = self.beersmith_path / "mcp_backups"
         self._cache: dict[str, tuple[float, Any]] = {}  # filename -> (mtime, parsed_data)
 
+    def _xml_escape(self, text: str) -> str:
+        """Escape text for XML, converting non-ASCII to numeric character references."""
+        # First do standard HTML escaping
+        text = html.escape(text)
+        # Then encode non-ASCII characters as XML numeric entities
+        result = []
+        for char in text:
+            if ord(char) > 127:
+                result.append(f'&#{ord(char)};')
+            else:
+                result.append(char)
+        return ''.join(result)
+
     def _get_file_path(self, filename: str) -> Path:
         """Get full path to a BeerSmith file."""
         return self.beersmith_path / filename
@@ -759,25 +772,25 @@ class BeerSmithParser:
         lines = [
             f"<Recipe><_PERMID_>{recipe.id}</_PERMID_>",
             f"<_MOD_>{datetime.now().strftime('%Y-%m-%d')}</_MOD_>",
-            f"<F_R_NAME>{html.escape(recipe.name)}</F_R_NAME>",
-            f"<F_R_BREWER>{html.escape(recipe.brewer)}</F_R_BREWER>",
+            f"<F_R_NAME>{self._xml_escape(recipe.name)}</F_R_NAME>",
+            f"<F_R_BREWER>{self._xml_escape(recipe.brewer)}</F_R_BREWER>",
             f"<F_R_DATE>{recipe.recipe_date or datetime.now().strftime('%Y-%m-%d')}</F_R_DATE>",
-            f"<F_R_FOLDER_NAME>{html.escape(recipe.folder)}</F_R_FOLDER_NAME>",
+            f"<F_R_FOLDER_NAME>{self._xml_escape(recipe.folder)}</F_R_FOLDER_NAME>",
             f"<F_R_OG>{recipe.og:.7f}</F_R_OG>",
             f"<F_R_FG>{recipe.fg:.7f}</F_R_FG>",
             f"<F_R_IBU>{recipe.ibu:.7f}</F_R_IBU>",
             f"<F_R_COLOR>{recipe.color_srm:.7f}</F_R_COLOR>",
             f"<F_R_ABV>{recipe.abv:.7f}</F_R_ABV>",
             f"<F_R_BOIL_TIME>{recipe.boil_time:.7f}</F_R_BOIL_TIME>",
-            f"<F_R_NOTES>{html.escape(recipe.notes)}</F_R_NOTES>",
+            f"<F_R_NOTES>{self._xml_escape(recipe.notes)}</F_R_NOTES>",
         ]
 
         # Add style if present
         if recipe.style:
             lines.append("<F_R_STYLE>")
-            lines.append(f"<F_S_NAME>{html.escape(recipe.style.name)}</F_S_NAME>")
-            lines.append(f"<F_S_CATEGORY>{html.escape(recipe.style.category)}</F_S_CATEGORY>")
-            lines.append(f"<F_S_GUIDE>{html.escape(recipe.style.guide)}</F_S_GUIDE>")
+            lines.append(f"<F_S_NAME>{self._xml_escape(recipe.style.name)}</F_S_NAME>")
+            lines.append(f"<F_S_CATEGORY>{self._xml_escape(recipe.style.category)}</F_S_CATEGORY>")
+            lines.append(f"<F_S_GUIDE>{self._xml_escape(recipe.style.guide)}</F_S_GUIDE>")
             lines.append("</F_R_STYLE>")
 
         # Add equipment profile if present
@@ -785,7 +798,7 @@ class BeerSmithParser:
             lines.append("<F_R_EQUIPMENT>")
             lines.append(f"<_PERMID_>0</_PERMID_>")
             lines.append(f"<_MOD_>{datetime.now().strftime('%Y-%m-%d')}</_MOD_>")
-            lines.append(f"<F_E_NAME>{html.escape(recipe.equipment.name)}</F_E_NAME>")
+            lines.append(f"<F_E_NAME>{self._xml_escape(recipe.equipment.name)}</F_E_NAME>")
             lines.append(f"<F_E_TYPE>{recipe.equipment.type}</F_E_TYPE>")
             lines.append(f"<F_E_SHOW_BOIL>{1 if recipe.equipment.type in [0, 1] else 0}</F_E_SHOW_BOIL>")
             lines.append(f"<F_E_MASH_VOL>{recipe.equipment.mash_vol_oz:.7f}</F_E_MASH_VOL>")
@@ -808,7 +821,7 @@ class BeerSmithParser:
             lines.append(f"<F_E_TOP_UP>0.0000000</F_E_TOP_UP>")
             lines.append(f"<F_E_EFFICIENCY>{recipe.equipment.efficiency:.7f}</F_E_EFFICIENCY>")
             lines.append(f"<F_E_HOP_UTIL>{recipe.equipment.hop_utilization:.7f}</F_E_HOP_UTIL>")
-            lines.append(f"<F_E_NOTES>{html.escape(recipe.equipment.notes or '')}</F_E_NOTES>")
+            lines.append(f"<F_E_NOTES>{self._xml_escape(recipe.equipment.notes or '')}</F_E_NOTES>")
             lines.append("</F_R_EQUIPMENT>")
 
         # Add mash profile if present
@@ -816,14 +829,14 @@ class BeerSmithParser:
             lines.append("<F_R_MASH>")
             lines.append(f"<_PERMID_>0</_PERMID_>")
             lines.append(f"<_MOD_>{datetime.now().strftime('%Y-%m-%d')}</_MOD_>")
-            lines.append(f"<F_MH_NAME>{html.escape(recipe.mash.name)}</F_MH_NAME>")
+            lines.append(f"<F_MH_NAME>{self._xml_escape(recipe.mash.name)}</F_MH_NAME>")
             lines.append(f"<F_MH_GRAIN_WEIGHT>160.0000000</F_MH_GRAIN_WEIGHT>")
             lines.append(f"<F_MH_GRAIN_TEMP>72.0000000</F_MH_GRAIN_TEMP>")
             lines.append(f"<F_MH_BOIL_TEMP>212.0000000</F_MH_BOIL_TEMP>")
             lines.append(f"<F_MH_TUN_TEMP>72.0000000</F_MH_TUN_TEMP>")
             lines.append(f"<F_MH_PH>5.4000000</F_MH_PH>")
             lines.append(f"<F_MH_SPARGE_TEMP>168.0000000</F_MH_SPARGE_TEMP>")
-            lines.append(f"<F_MH_NOTES>{html.escape(recipe.mash.notes or '')}</F_MH_NOTES>")
+            lines.append(f"<F_MH_NOTES>{self._xml_escape(recipe.mash.notes or '')}</F_MH_NOTES>")
             
             # Add mash steps if present
             if recipe.mash.steps:
@@ -831,7 +844,7 @@ class BeerSmithParser:
                 lines.append("<Data>")
                 for step in recipe.mash.steps:
                     lines.append("<MashStep>")
-                    lines.append(f"<F_MS_NAME>{html.escape(step.name)}</F_MS_NAME>")
+                    lines.append(f"<F_MS_NAME>{self._xml_escape(step.name)}</F_MS_NAME>")
                     lines.append(f"<F_MS_TYPE>{step.type}</F_MS_TYPE>")
                     lines.append(f"<F_MS_INFUSION>{step.infusion_amount_oz:.7f}</F_MS_INFUSION>")
                     lines.append(f"<F_MS_STEP_TEMP>{step.step_temp_f:.7f}</F_MS_STEP_TEMP>")
@@ -848,12 +861,12 @@ class BeerSmithParser:
             lines.append("<F_R_CARB>")
             lines.append(f"<_PERMID_>0</_PERMID_>")
             lines.append(f"<_MOD_>{datetime.now().strftime('%Y-%m-%d')}</_MOD_>")
-            lines.append(f"<F_C_NAME>{html.escape(recipe.carbonation.name)}</F_C_NAME>")
+            lines.append(f"<F_C_NAME>{self._xml_escape(recipe.carbonation.name)}</F_C_NAME>")
             lines.append(f"<F_C_TEMPERATURE>{recipe.carbonation.temperature:.7f}</F_C_TEMPERATURE>")
             lines.append(f"<F_C_TYPE>{recipe.carbonation.type}</F_C_TYPE>")
-            lines.append(f"<F_C_PRIMER_NAME>{html.escape(recipe.carbonation.primer_name)}</F_C_PRIMER_NAME>")
+            lines.append(f"<F_C_PRIMER_NAME>{self._xml_escape(recipe.carbonation.primer_name)}</F_C_PRIMER_NAME>")
             lines.append(f"<F_C_CARB_RATE>{recipe.carbonation.carb_rate:.7f}</F_C_CARB_RATE>")
-            lines.append(f"<F_C_NOTES>{html.escape(recipe.carbonation.notes)}</F_C_NOTES>")
+            lines.append(f"<F_C_NOTES>{self._xml_escape(recipe.carbonation.notes)}</F_C_NOTES>")
             lines.append("</F_R_CARB>")
 
         # Add age/fermentation profile if present
@@ -861,7 +874,7 @@ class BeerSmithParser:
             lines.append("<F_R_AGE>")
             lines.append(f"<_PERMID_>0</_PERMID_>")
             lines.append(f"<_MOD_>{datetime.now().strftime('%Y-%m-%d')}</_MOD_>")
-            lines.append(f"<F_A_NAME>{html.escape(recipe.age.name)}</F_A_NAME>")
+            lines.append(f"<F_A_NAME>{self._xml_escape(recipe.age.name)}</F_A_NAME>")
             lines.append(f"<F_A_PRIM_TEMP>{recipe.age.prim_temp:.7f}</F_A_PRIM_TEMP>")
             lines.append(f"<F_A_PRIM_END_TEMP>{recipe.age.prim_end_temp:.7f}</F_A_PRIM_END_TEMP>")
             lines.append(f"<F_A_SEC_TEMP>{recipe.age.sec_temp:.7f}</F_A_SEC_TEMP>")
@@ -887,7 +900,7 @@ class BeerSmithParser:
         # Add grains
         for grain in recipe.grains:
             lines.append("<Grain>")
-            lines.append(f"<F_G_NAME>{html.escape(grain.name)}</F_G_NAME>")
+            lines.append(f"<F_G_NAME>{self._xml_escape(grain.name)}</F_G_NAME>")
             lines.append(f"<F_G_AMOUNT>{grain.amount_oz:.7f}</F_G_AMOUNT>")
             lines.append(f"<F_G_COLOR>{grain.color:.7f}</F_G_COLOR>")
             lines.append(f"<F_G_YIELD>{grain.yield_pct:.7f}</F_G_YIELD>")
@@ -898,7 +911,7 @@ class BeerSmithParser:
         # Add hops
         for hop in recipe.hops:
             lines.append("<Hops>")
-            lines.append(f"<F_H_NAME>{html.escape(hop.name)}</F_H_NAME>")
+            lines.append(f"<F_H_NAME>{self._xml_escape(hop.name)}</F_H_NAME>")
             lines.append(f"<F_H_AMOUNT>{hop.amount_oz:.7f}</F_H_AMOUNT>")
             lines.append(f"<F_H_ALPHA>{hop.alpha:.7f}</F_H_ALPHA>")
             lines.append(f"<F_H_BOIL_TIME>{hop.boil_time:.7f}</F_H_BOIL_TIME>")
@@ -909,9 +922,9 @@ class BeerSmithParser:
         # Add yeasts
         for yeast in recipe.yeasts:
             lines.append("<Yeast>")
-            lines.append(f"<F_Y_NAME>{html.escape(yeast.name)}</F_Y_NAME>")
-            lines.append(f"<F_Y_LAB>{html.escape(yeast.lab)}</F_Y_LAB>")
-            lines.append(f"<F_Y_PRODUCT_ID>{html.escape(yeast.product_id)}</F_Y_PRODUCT_ID>")
+            lines.append(f"<F_Y_NAME>{self._xml_escape(yeast.name)}</F_Y_NAME>")
+            lines.append(f"<F_Y_LAB>{self._xml_escape(yeast.lab)}</F_Y_LAB>")
+            lines.append(f"<F_Y_PRODUCT_ID>{self._xml_escape(yeast.product_id)}</F_Y_PRODUCT_ID>")
             lines.append(f"<F_Y_AMOUNT>{yeast.amount:.7f}</F_Y_AMOUNT>")
             lines.append(f"<F_Y_TYPE>{yeast.type}</F_Y_TYPE>")
             lines.append(f"<F_Y_FORM>{yeast.form}</F_Y_FORM>")
@@ -1021,8 +1034,9 @@ class BeerSmithParser:
 """
             
             # Insert the folder at the end of the main Data section
-            # Find the pattern: </Data> followed by root-level tags like <_TExpanded>
-            end_pattern = r'</Data>\s*\n\s*<_TExpanded>'
+            # Find the correct position: before the LAST </Data> that's followed by <_TExpanded> and has <PermCount> nearby
+            # This pattern uniquely identifies the main data section closing
+            end_pattern = r'</Data>\s*\n\s*<_TExpanded>[^<]*</[^>]+>[^<]*<TExtra>[^<]*</[^>]+>[^<]*<TxLog>1</TxLog>'
             match = re.search(end_pattern, content)
             if match:
                 # Insert right before the </Data> tag
@@ -1046,10 +1060,10 @@ class BeerSmithParser:
             '<?xml version="1.0" encoding="UTF-8"?>',
             '<RECIPES>',
             '  <RECIPE>',
-            f'    <NAME>{html.escape(recipe.name)}</NAME>',
+            f'    <NAME>{self._xml_escape(recipe.name)}</NAME>',
             '    <VERSION>1</VERSION>',
             '    <TYPE>All Grain</TYPE>',
-            f'    <BREWER>{html.escape(recipe.brewer)}</BREWER>',
+            f'    <BREWER>{self._xml_escape(recipe.brewer)}</BREWER>',
             f'    <BATCH_SIZE>{recipe.batch_size_liters:.2f}</BATCH_SIZE>',
             f'    <BOIL_SIZE>{recipe.batch_size_liters * 1.2:.2f}</BOIL_SIZE>',
             f'    <BOIL_TIME>{recipe.boil_time:.0f}</BOIL_TIME>',
@@ -1060,7 +1074,7 @@ class BeerSmithParser:
         lines.append('    <HOPS>')
         for hop in recipe.hops:
             lines.append('      <HOP>')
-            lines.append(f'        <NAME>{html.escape(hop.name)}</NAME>')
+            lines.append(f'        <NAME>{self._xml_escape(hop.name)}</NAME>')
             lines.append('        <VERSION>1</VERSION>')
             lines.append(f'        <ALPHA>{hop.alpha:.2f}</ALPHA>')
             lines.append(f'        <AMOUNT>{hop.amount_grams / 1000:.4f}</AMOUNT>')
@@ -1073,7 +1087,7 @@ class BeerSmithParser:
         lines.append('    <FERMENTABLES>')
         for grain in recipe.grains:
             lines.append('      <FERMENTABLE>')
-            lines.append(f'        <NAME>{html.escape(grain.name)}</NAME>')
+            lines.append(f'        <NAME>{self._xml_escape(grain.name)}</NAME>')
             lines.append('        <VERSION>1</VERSION>')
             lines.append(f'        <TYPE>{grain.type_name}</TYPE>')
             lines.append(f'        <AMOUNT>{grain.amount_kg:.4f}</AMOUNT>')
@@ -1086,12 +1100,12 @@ class BeerSmithParser:
         lines.append('    <YEASTS>')
         for yeast in recipe.yeasts:
             lines.append('      <YEAST>')
-            lines.append(f'        <NAME>{html.escape(yeast.name)}</NAME>')
+            lines.append(f'        <NAME>{self._xml_escape(yeast.name)}</NAME>')
             lines.append('        <VERSION>1</VERSION>')
             lines.append(f'        <TYPE>{yeast.type_name}</TYPE>')
             lines.append(f'        <FORM>{yeast.form_name}</FORM>')
-            lines.append(f'        <LABORATORY>{html.escape(yeast.lab)}</LABORATORY>')
-            lines.append(f'        <PRODUCT_ID>{html.escape(yeast.product_id)}</PRODUCT_ID>')
+            lines.append(f'        <LABORATORY>{self._xml_escape(yeast.lab)}</LABORATORY>')
+            lines.append(f'        <PRODUCT_ID>{self._xml_escape(yeast.product_id)}</PRODUCT_ID>')
             lines.append(f'        <MIN_TEMPERATURE>{yeast.min_temp_c:.1f}</MIN_TEMPERATURE>')
             lines.append(f'        <MAX_TEMPERATURE>{yeast.max_temp_c:.1f}</MAX_TEMPERATURE>')
             lines.append(f'        <ATTENUATION>{yeast.avg_attenuation:.1f}</ATTENUATION>')
@@ -1101,10 +1115,10 @@ class BeerSmithParser:
         # Add style if present
         if recipe.style:
             lines.append('    <STYLE>')
-            lines.append(f'      <NAME>{html.escape(recipe.style.name)}</NAME>')
+            lines.append(f'      <NAME>{self._xml_escape(recipe.style.name)}</NAME>')
             lines.append('      <VERSION>1</VERSION>')
-            lines.append(f'      <CATEGORY>{html.escape(recipe.style.category)}</CATEGORY>')
-            lines.append(f'      <STYLE_GUIDE>{html.escape(recipe.style.guide)}</STYLE_GUIDE>')
+            lines.append(f'      <CATEGORY>{self._xml_escape(recipe.style.category)}</CATEGORY>')
+            lines.append(f'      <STYLE_GUIDE>{self._xml_escape(recipe.style.guide)}</STYLE_GUIDE>')
             lines.append(f'      <OG_MIN>{recipe.style.min_og:.3f}</OG_MIN>')
             lines.append(f'      <OG_MAX>{recipe.style.max_og:.3f}</OG_MAX>')
             lines.append(f'      <FG_MIN>{recipe.style.min_fg:.3f}</FG_MIN>')
