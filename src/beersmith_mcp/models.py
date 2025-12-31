@@ -478,6 +478,9 @@ class Equipment(BeerSmithBase):
     trub_loss_oz: float = Field(alias="f_e_trub_loss", default=96.0)
     fermenter_loss_oz: float = Field(alias="f_e_fermenter_loss", default=51.2)
     mash_vol_oz: float = Field(alias="f_e_mash_vol", default=640.0)
+    tun_mass: float = Field(alias="f_e_tun_mass", default=64.0)  # Tun weight in oz
+    tun_specific_heat: float = Field(alias="f_e_tun_specific_heat", default=0.12)
+    tun_deadspace: float = Field(alias="f_e_tun_deadspace", default=0.0)  # Lauter deadspace
     notes: str = Field(alias="f_e_notes", default="")
 
     @property
