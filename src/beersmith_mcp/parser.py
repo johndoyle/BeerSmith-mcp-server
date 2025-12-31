@@ -774,8 +774,27 @@ class BeerSmithParser:
             f"<_MOD_>{datetime.now().strftime('%Y-%m-%d')}</_MOD_>",
             f"<F_R_NAME>{self._xml_escape(recipe.name)}</F_R_NAME>",
             f"<F_R_BREWER>{self._xml_escape(recipe.brewer)}</F_R_BREWER>",
+            f"<F_R_ASST_BREWER></F_R_ASST_BREWER>",
             f"<F_R_DATE>{recipe.recipe_date or datetime.now().strftime('%Y-%m-%d')}</F_R_DATE>",
+            f"<F_R_INV_DATE>{datetime.now().strftime('%Y-%m-%d')}</F_R_INV_DATE>",
             f"<F_R_FOLDER_NAME>{self._xml_escape(recipe.folder)}</F_R_FOLDER_NAME>",
+            f"<F_R_GRAIN_USE_SET>1</F_R_GRAIN_USE_SET>",
+            f"<F_R_VOLUME_MEASURED>0.0000000</F_R_VOLUME_MEASURED>",
+            f"<F_R_VOLUME_MEASURED_SET>0</F_R_VOLUME_MEASURED_SET>",
+            f"<F_R_FINAL_VOL_MEASURED>0.0000000</F_R_FINAL_VOL_MEASURED>",
+            f"<F_R_FINAL_VOL_MEASURED_SET>0</F_R_FINAL_VOL_MEASURED_SET>",
+            f"<F_R_MASH_TIMER>0</F_R_MASH_TIMER>",
+            f"<F_R_BOIL_TIMER>0</F_R_BOIL_TIMER>",
+            f"<F_R_MTIMER_DOWN>0</F_R_MTIMER_DOWN>",
+            f"<F_R_BTIMER_DOWN>0</F_R_BTIMER_DOWN>",
+            f"<F_R_WINE_COLOR>0</F_R_WINE_COLOR>",
+            f"<Image></Image>",
+            f"<F_R_IMAGE_X>0</F_R_IMAGE_X>",
+            f"<F_R_IMAGE_Y>0</F_R_IMAGE_Y>",
+        ]
+        
+        # Add computed values that come after image
+        lines.extend([
             f"<F_R_OG>{recipe.og:.7f}</F_R_OG>",
             f"<F_R_FG>{recipe.fg:.7f}</F_R_FG>",
             f"<F_R_IBU>{recipe.ibu:.7f}</F_R_IBU>",
@@ -783,7 +802,7 @@ class BeerSmithParser:
             f"<F_R_ABV>{recipe.abv:.7f}</F_R_ABV>",
             f"<F_R_BOIL_TIME>{recipe.boil_time:.7f}</F_R_BOIL_TIME>",
             f"<F_R_NOTES>{self._xml_escape(recipe.notes)}</F_R_NOTES>",
-        ]
+        ])
 
         # Add style if present
         if recipe.style:
