@@ -451,6 +451,74 @@ class BeerSmithParser:
                 return profile
         return None
 
+    # === Carbonation Methods ===
+
+    def get_carbonation_profiles(self) -> list:
+        """Get all carbonation profiles."""
+        from beersmith_mcp.models import Carbonation
+        
+        root = self._parse_xml_file("Carbonation.bsmx")
+        if root is None:
+            return []
+
+        profiles = []
+        for data in root.iter("Data"):
+            for carb_elem in data.findall("Carbonation"):
+                try:
+                    carb_dict = self._element_to_dict(carb_elem)
+                    carb = Carbonation.model_validate(carb_dict)
+                    profiles.append(carb)
+                except Exception as e:
+                    print(f"Warning: Failed to parse carbonation profile: {e}")
+
+        return sorted(profiles, key=lambda c: c.name)
+
+    def get_carbonation_profile(self, name: str):
+        """Get a specific carbonation profile by name."""
+        profiles = self.get_carbonation_profiles()
+        for profile in profiles:
+            if profile.name.lower() == name.lower():
+                return profile
+        # Try partial match
+        for profile in profiles:
+            if name.lower() in profile.name.lower():
+                return profile
+        return None
+
+    # === Fermentation/Aging Methods ===
+
+    def get_age_profiles(self) -> list:
+        """Get all fermentation/aging profiles."""
+        from beersmith_mcp.models import AgeProfile
+        
+        root = self._parse_xml_file("Age.bsmx")
+        if root is None:
+            return []
+
+        profiles = []
+        for data in root.iter("Data"):
+            for age_elem in data.findall("Age"):
+                try:
+                    age_dict = self._element_to_dict(age_elem)
+                    age = AgeProfile.model_validate(age_dict)
+                    profiles.append(age)
+                except Exception as e:
+                    print(f"Warning: Failed to parse age profile: {e}")
+
+        return sorted(profiles, key=lambda a: a.name)
+
+    def get_age_profile(self, name: str):
+        """Get a specific age profile by name."""
+        profiles = self.get_age_profiles()
+        for profile in profiles:
+            if profile.name.lower() == name.lower():
+                return profile
+        # Try partial match
+        for profile in profiles:
+            if name.lower() in profile.name.lower():
+                return profile
+        return None
+
     # === Misc Methods ===
 
     def get_misc_ingredients(self, search: str | None = None) -> list[Misc]:
@@ -712,6 +780,106 @@ class BeerSmithParser:
             lines.append(f"<F_S_CATEGORY>{html.escape(recipe.style.category)}</F_S_CATEGORY>")
             lines.append(f"<F_S_GUIDE>{html.escape(recipe.style.guide)}</F_S_GUIDE>")
             lines.append("</F_R_STYLE>")
+
+        # Add equipment profile if present
+        if recipe.equipment:
+            lines.append("<F_R_EQUIPMENT>")
+            lines.append(f"<_PERMID_>0</_PERMID_>")
+            lines.append(f"<_MOD_>{datetime.now().strftime('%Y-%m-%d')}</_MOD_>")
+            lines.append(f"<F_E_NAME>{html.escape(recipe.equipment.name)}</F_E_NAME>")
+            lines.append(f"<F_E_TYPE>{recipe.equipment.type}</F_E_TYPE>")
+            lines.append(f"<F_E_SHOW_BOIL>{1 if recipe.equipment.type in [0, 1] else 0}</F_E_SHOW_BOIL>")
+            lines.append(f"<F_E_MASH_VOL>{recipe.equipment.mash_volume_oz:.7f}</F_E_MASH_VOL>")
+            lines.append(f"<F_E_TUN_MASS>{recipe.equipment.tun_weight:.7f}</F_E_TUN_MASS>")
+            lines.append(f"<F_E_BOIL_RATE_FLAG>1</F_E_BOIL_RATE_FLAG>")
+            lines.append(f"<F_E_TUN_SPECIFIC_HEAT>{recipe.equipment.tun_specific_heat:.7f}</F_E_TUN_SPECIFIC_HEAT>")
+            lines.append(f"<F_E_TUN_DEADSPACE>{recipe.equipment.lauter_deadspace_oz:.7f}</F_E_TUN_DEADSPACE>")
+            lines.append(f"<F_E_TUN_ADDITION>0.0000000</F_E_TUN_ADDITION>")
+            lines.append(f"<F_E_TUN_ADJ_DEADSPACE>0</F_E_TUN_ADJ_DEADSPACE>")
+            lines.append(f"<F_E_CALC_BOIL>1</F_E_CALC_BOIL>")
+            lines.append(f"<F_E_BOIL_VOL>{recipe.equipment.boil_size_oz:.7f}</F_E_BOIL_VOL>")
+            lines.append(f"<F_E_BOIL_TIME>{recipe.equipment.boil_time:.7f}</F_E_BOIL_TIME>")
+            lines.append(f"<F_E_OLD_EVAP_RATE>10.0000000</F_E_OLD_EVAP_RATE>")
+            lines.append(f"<F_E_BOIL_OFF>{recipe.equipment.boil_off_oz:.7f}</F_E_BOIL_OFF>")
+            lines.append(f"<F_E_TRUB_LOSS>{recipe.equipment.trub_loss_oz:.7f}</F_E_TRUB_LOSS>")
+            lines.append(f"<F_E_COOL_PCT>0.0000000</F_E_COOL_PCT>")
+            lines.append(f"<F_E_TOP_UP_KETTLE>0.0000000</F_E_TOP_UP_KETTLE>")
+            lines.append(f"<F_E_BATCH_VOL>{recipe.equipment.batch_size_oz:.7f}</F_E_BATCH_VOL>")
+            lines.append(f"<F_E_FERMENTER_LOSS>{recipe.equipment.fermenter_loss_oz:.7f}</F_E_FERMENTER_LOSS>")
+            lines.append(f"<F_E_TOP_UP>0.0000000</F_E_TOP_UP>")
+            lines.append(f"<F_E_EFFICIENCY>{recipe.equipment.efficiency:.7f}</F_E_EFFICIENCY>")
+            lines.append(f"<F_E_HOP_UTIL>{recipe.equipment.hop_utilization:.7f}</F_E_HOP_UTIL>")
+            lines.append(f"<F_E_NOTES>{html.escape(recipe.equipment.notes or '')}</F_E_NOTES>")
+            lines.append("</F_R_EQUIPMENT>")
+
+        # Add mash profile if present
+        if recipe.mash:
+            lines.append("<F_R_MASH>")
+            lines.append(f"<_PERMID_>0</_PERMID_>")
+            lines.append(f"<_MOD_>{datetime.now().strftime('%Y-%m-%d')}</_MOD_>")
+            lines.append(f"<F_MH_NAME>{html.escape(recipe.mash.name)}</F_MH_NAME>")
+            lines.append(f"<F_MH_GRAIN_WEIGHT>160.0000000</F_MH_GRAIN_WEIGHT>")
+            lines.append(f"<F_MH_GRAIN_TEMP>72.0000000</F_MH_GRAIN_TEMP>")
+            lines.append(f"<F_MH_BOIL_TEMP>212.0000000</F_MH_BOIL_TEMP>")
+            lines.append(f"<F_MH_TUN_TEMP>72.0000000</F_MH_TUN_TEMP>")
+            lines.append(f"<F_MH_PH>5.4000000</F_MH_PH>")
+            lines.append(f"<F_MH_SPARGE_TEMP>168.0000000</F_MH_SPARGE_TEMP>")
+            lines.append(f"<F_MH_NOTES>{html.escape(recipe.mash.notes or '')}</F_MH_NOTES>")
+            
+            # Add mash steps if present
+            if recipe.mash.steps:
+                lines.append("<steps>")
+                lines.append("<Data>")
+                for step in recipe.mash.steps:
+                    lines.append("<MashStep>")
+                    lines.append(f"<F_MS_NAME>{html.escape(step.name)}</F_MS_NAME>")
+                    lines.append(f"<F_MS_TYPE>{step.type}</F_MS_TYPE>")
+                    lines.append(f"<F_MS_INFUSION>{step.infusion_oz:.7f}</F_MS_INFUSION>")
+                    lines.append(f"<F_MS_STEP_TEMP>{step.step_temp_f:.7f}</F_MS_STEP_TEMP>")
+                    lines.append(f"<F_MS_STEP_TIME>{step.step_time:.7f}</F_MS_STEP_TIME>")
+                    lines.append(f"<F_MS_RISE_TIME>{step.rise_time:.7f}</F_MS_RISE_TIME>")
+                    lines.append("</MashStep>")
+                lines.append("</Data>")
+                lines.append("</steps>")
+            
+            lines.append("</F_R_MASH>")
+
+        # Add carbonation profile if present
+        if recipe.carbonation:
+            lines.append("<F_R_CARB>")
+            lines.append(f"<_PERMID_>0</_PERMID_>")
+            lines.append(f"<_MOD_>{datetime.now().strftime('%Y-%m-%d')}</_MOD_>")
+            lines.append(f"<F_C_NAME>{html.escape(recipe.carbonation.name)}</F_C_NAME>")
+            lines.append(f"<F_C_TEMPERATURE>{recipe.carbonation.temperature:.7f}</F_C_TEMPERATURE>")
+            lines.append(f"<F_C_TYPE>{recipe.carbonation.type}</F_C_TYPE>")
+            lines.append(f"<F_C_PRIMER_NAME>{html.escape(recipe.carbonation.primer_name)}</F_C_PRIMER_NAME>")
+            lines.append(f"<F_C_CARB_RATE>{recipe.carbonation.carb_rate:.7f}</F_C_CARB_RATE>")
+            lines.append(f"<F_C_NOTES>{html.escape(recipe.carbonation.notes)}</F_C_NOTES>")
+            lines.append("</F_R_CARB>")
+
+        # Add age/fermentation profile if present
+        if recipe.age:
+            lines.append("<F_R_AGE>")
+            lines.append(f"<_PERMID_>0</_PERMID_>")
+            lines.append(f"<_MOD_>{datetime.now().strftime('%Y-%m-%d')}</_MOD_>")
+            lines.append(f"<F_A_NAME>{html.escape(recipe.age.name)}</F_A_NAME>")
+            lines.append(f"<F_A_PRIM_TEMP>{recipe.age.prim_temp:.7f}</F_A_PRIM_TEMP>")
+            lines.append(f"<F_A_PRIM_END_TEMP>{recipe.age.prim_end_temp:.7f}</F_A_PRIM_END_TEMP>")
+            lines.append(f"<F_A_SEC_TEMP>{recipe.age.sec_temp:.7f}</F_A_SEC_TEMP>")
+            lines.append(f"<F_A_SEC_END_TEMP>{recipe.age.sec_end_temp:.7f}</F_A_SEC_END_TEMP>")
+            lines.append(f"<F_A_TERT_TEMP>{recipe.age.tert_temp:.7f}</F_A_TERT_TEMP>")
+            lines.append(f"<F_A_AGE_TEMP>{recipe.age.age_temp:.7f}</F_A_AGE_TEMP>")
+            lines.append(f"<F_A_TERT_END_TEMP>{recipe.age.tert_end_temp:.7f}</F_A_TERT_END_TEMP>")
+            lines.append(f"<F_A_END_AGE_TEMP>{recipe.age.end_age_temp:.7f}</F_A_END_AGE_TEMP>")
+            lines.append(f"<F_A_BULK_TEMP>{recipe.age.bulk_temp:.7f}</F_A_BULK_TEMP>")
+            lines.append(f"<F_A_BULK_END_TEMP>{recipe.age.bulk_end_temp:.7f}</F_A_BULK_END_TEMP>")
+            lines.append(f"<F_A_PRIM_DAYS>{recipe.age.prim_days:.7f}</F_A_PRIM_DAYS>")
+            lines.append(f"<F_A_SEC_DAYS>{recipe.age.sec_days:.7f}</F_A_SEC_DAYS>")
+            lines.append(f"<F_A_TERT_DAYS>{recipe.age.tert_days:.7f}</F_A_TERT_DAYS>")
+            lines.append(f"<F_A_BULK_DAYS>{recipe.age.bulk_days:.7f}</F_A_BULK_DAYS>")
+            lines.append(f"<F_A_AGE>{recipe.age.age_days:.7f}</F_A_AGE>")
+            lines.append(f"<F_A_TYPE>{recipe.age.type}</F_A_TYPE>")
+            lines.append("</F_R_AGE>")
 
         # Add ingredients section
         lines.append("<Ingredients>")

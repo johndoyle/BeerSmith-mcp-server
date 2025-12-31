@@ -467,6 +467,25 @@ def create_recipe(
     if not yeast:
         return f"Yeast '{yeast_name}' not found. Use list_yeasts to see available strains."
 
+    # Get default mash profile
+    mash_profile = parser.get_mash_profile("Single Infusion, Light Body, Batch Sparge")
+    if not mash_profile:
+        # Fallback to any single infusion profile
+        mash_profile = parser.get_mash_profile("Single Infusion")
+
+    # Get default carbonation profile (Keg for most homebrewers)
+    carbonation_profile = parser.get_carbonation_profile("Keg")
+    if not carbonation_profile:
+        # Fallback to any carbonation profile
+        carbonation_profiles = parser.get_carbonation_profiles()
+        carbonation_profile = carbonation_profiles[0] if carbonation_profiles else None
+
+    # Get default age/fermentation profile (Ale, Two Stage)
+    age_profile = parser.get_age_profile("Ale, Two Stage")
+    if not age_profile:
+        # Fallback to single stage
+        age_profile = parser.get_age_profile("Ale, Single Stage")
+
     # Build recipe
     recipe = Recipe(
         id="0",
@@ -476,6 +495,9 @@ def create_recipe(
         boil_time=boil_time,
         style=style,
         equipment=equipment,
+        mash=mash_profile,
+        carbonation=carbonation_profile,
+        age=age_profile,
         folder="/MCP Created/",
     )
 
