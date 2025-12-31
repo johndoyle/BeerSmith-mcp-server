@@ -684,15 +684,15 @@ If ingredient matching is poor:
 
 Most operations are read-only. Write operations (create_recipe) create new files without modifying existing data.
 
-### No Data Loss Risk
+### Loe Data Loss Risk
 
-- Your BeerSmith files are only read, never modified
+- Your BeerSmith files are backed up when written to
 - New recipes are saved as separate `.bsmx` files
 - Original recipes remain untouched
 
 ### Concurrent Access
 
-BeerSmith and the MCP server can run simultaneously without conflicts.
+BeerSmith and the MCP server can run simultaneously without conflicts.  But it is advised not to as both may try to write to the same files and BeerSmith Saves its files after closing and so overwrite any changes made by the MCP server during that session.
 
 ## Performance
 
@@ -707,6 +707,7 @@ BeerSmith and the MCP server can run simultaneously without conflicts.
 2. **macOS Only**: Currently only supports macOS BeerSmith installations
 3. **BeerSmith 3**: Tested with BeerSmith 3 format
 4. **No Real-Time Sync**: Changes in BeerSmith require server restart to reflect
+5. **Ingredient Variations**: Fuzzy matching may not be perfect for all ingredient name variations
 
 ## Future Enhancements
 
@@ -720,8 +721,8 @@ BeerSmith and the MCP server can run simultaneously without conflicts.
 ## Credits
 
 Built for integration between:
-- **BeerSmith 3** by Brad Smith
-- **Grocy** inventory management
+- **BeerSmith 3** by Brad Smith 
+- **Grocy** inventory management 
 - **Claude Desktop** by Anthropic
 - **Model Context Protocol (MCP)** by Anthropic
 
