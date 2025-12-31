@@ -792,6 +792,62 @@ class BeerSmithParser:
         filepath.write_text(full_xml, encoding="utf-8")
         return True
 
+    def add_recipe_to_beersmith(self, recipe: Recipe) -> bool:
+        """
+        Add a recipe directly to BeerSmith's Recipe.bsmx file.
+        
+        This makes the recipe appear in BeerSmith without manual import.
+        Creates a backup before modifying the file.
+        """
+        recipe_file = self.beersmith_path / "Recipe.bsmx"
+        
+        if not recipe_file.exists():
+            raise FileNotFoundError(f"Recipe.bsmx not found at {recipe_file}")
+        
+        # Create backup
+        self.backup_path.mkdir(exist_ok=True)
+        backup_file = self.backup_path / f"Recipe_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.bsmx"
+        shutil.copy2(recipe_file, backup_file)
+        
+        # Read the current Recipe.bsmx file
+        content = recipe_file.read_text(encoding="utf-8")
+        
+        # Find the /MCP Created/ folder or create it
+        # We'll add the recipe to a special MCP folder
+        folder_name = recipe.folder or "/MCP Created/"
+        
+        # Generate the recipe XML
+        recipe_xml = self._generate_recipe_xml(recipe)
+        
+        # Find the best place to insert the recipe
+        # Look for the Cloud folder or the end of the main Data section
+        cloud_folder_pattern = r'(<Table><_PERMID_>[^<]+</_PERMID_>[^<]*<_MOD_>[^<]+</_MOD_>[^<]*<Name>Cloud</Name>.*?<Data>)'
+        
+        import re
+        match = re.search(cloud_folder_pattern, content, re.DOTALL)
+        
+        if match:
+            # Insert before the Cloud folder
+            insert_pos = match.start()
+            new_content = content[:insert_pos] + recipe_xml + content[insert_pos:]
+        else:
+            # Insert at the end of the main Data section, before </Data></Recipe>
+            end_pattern = r'</Data></Recipe>\s*$'
+            match = re.search(end_pattern, content)
+            if match:
+                insert_pos = match.start()
+                new_content = content[:insert_pos] + recipe_xml + content[insert_pos:]
+            else:
+                raise ValueError("Could not find insertion point in Recipe.bsmx")
+        
+        # Write the modified content
+        recipe_file.write_text(new_content, encoding="utf-8")
+        
+        # Clear cache
+        self._cache.clear()
+        
+        return True
+
     def export_recipe_beerxml(self, recipe: Recipe) -> str:
         """Export a recipe in BeerXML format."""
         # BeerXML 1.0 format

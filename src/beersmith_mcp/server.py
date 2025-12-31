@@ -496,7 +496,21 @@ def create_recipe(
             )
             recipe.grains.append(recipe_grain)
         else:
-            return f"Grain '{grain_data['name']}' not found."
+            # Try to find similar grains
+            from rapidfuzz import process, fuzz
+            all_grains = parser.get_grains()
+            grain_names = [g.name for g in all_grains]
+            matches = process.extract(
+                grain_data["name"], 
+                grain_names, 
+                scorer=fuzz.ratio,
+                limit=3
+            )
+            suggestions = "\n".join([f"  - {match[0]} (confidence: {match[1]:.0f}%)" for match in matches if match[1] > 60])
+            if suggestions:
+                return f"Grain '{grain_data['name']}' not found.\n\nDid you mean one of these?\n{suggestions}"
+            else:
+                return f"Grain '{grain_data['name']}' not found. Use list_grains to see available grains."
 
     # Add hops
     for hop_data in hops_data:
@@ -516,7 +530,21 @@ def create_recipe(
             )
             recipe.hops.append(recipe_hop)
         else:
-            return f"Hop '{hop_data['name']}' not found."
+            # Try to find similar hops
+            from rapidfuzz import process, fuzz
+            all_hops = parser.get_hops()
+            hop_names = [h.name for h in all_hops]
+            matches = process.extract(
+                hop_data["name"], 
+                hop_names, 
+                scorer=fuzz.ratio,
+                limit=3
+            )
+            suggestions = "\n".join([f"  - {match[0]} (confidence: {match[1]:.0f}%)" for match in matches if match[1] > 60])
+            if suggestions:
+                return f"Hop '{hop_data['name']}' not found.\n\nDid you mean one of these?\n{suggestions}"
+            else:
+                return f"Hop '{hop_data['name']}' not found. Use list_hops to see available hops."
 
     # Add yeast
     recipe_yeast = RecipeYeast(
@@ -536,16 +564,19 @@ def create_recipe(
 
     # Save recipe
     try:
+        # Add recipe directly to BeerSmith's Recipe.bsmx
+        parser.add_recipe_to_beersmith(recipe)
+        
+        # Also save as exportable file for backup
         parser.save_recipe(recipe)
         export_path = parser.beersmith_path / "MCP_Exports"
+        
         return (
             f"✅ Recipe '{name}' created successfully!\n\n"
-            f"Saved to: {export_path}\n\n"
-            f"To import into BeerSmith:\n"
-            f"1. Open BeerSmith 3\n"
-            f"2. File → Import\n"
-            f"3. Navigate to {export_path}\n"
-            f"4. Select the .bsmx file"
+            f"The recipe has been added to BeerSmith and should appear in your recipe list.\n"
+            f"Look for it in the '/MCP Created/' folder.\n\n"
+            f"A backup copy was also saved to: {export_path}\n\n"
+            f"**Note:** You may need to restart BeerSmith to see the new recipe."
         )
     except Exception as e:
         return f"Error saving recipe: {e}"
