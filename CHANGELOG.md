@@ -2,6 +2,43 @@
 
 All notable changes to the BeerSmith MCP Server will be documented in this file.
 
+## [1.1.0] - 2025-12-31
+
+### Added
+- **3 New Tools** for enhanced workflow:
+  - `search_recipes_by_ingredient`: Search all recipes containing a specific ingredient with amounts
+  - `list_recipes_with_ingredients`: List recipes with grain bills and hop schedules without full fetch
+  - `export_recipe_to_grocy`: Export recipes in Grocy-compatible JSON format with ingredient grouping
+- **Intelligent Ingredient Matching**: Fuzzy matching with suggestions when exact ingredient names don't match
+  - Shows top 3 similar ingredients with confidence scores
+  - Dramatically improves `create_recipe` user experience
+  - Applied to both grains and hops lookups
+
+### Fixed
+- **Recipe Creation Now Adds to BeerSmith**: Recipes created via `create_recipe` now:
+  - Automatically appear in BeerSmith's recipe list (no manual import needed)
+  - Are placed in a `/MCP Created/` folder for easy organization
+  - Create automatic backups before modifying Recipe.bsmx
+  - Still save exportable `.bsmx` files for backup purposes
+- **Equipment Profile Loading**: Fixed parser to handle BeerSmith's non-standard multi-root XML in Equipment.bsmx
+  - Now loads all 21 equipment profiles (was missing 1 custom profile)
+  - Uses text-based parsing to extract additional Equipment elements beyond first root
+- **Recipe Display Precision**: Improved amount formatting for better accuracy
+  - Grain amounts: 3 decimal places (3.875 kg instead of 3.88 kg)
+  - Hop amounts: 1 decimal place for grams (15.1 g instead of 15 g)
+  - Misc ingredients: 3 decimal places for precise measurements
+
+### Changed
+- Enhanced error messages with actionable suggestions
+- Recipe creation backup strategy with dual-save approach
+- Improved XML parsing robustness for malformed BeerSmith files
+
+### Technical
+- Added `add_recipe_to_beersmith()` method to parser for direct Recipe.bsmx modification
+- Integrated rapidfuzz fuzzy matching into ingredient lookup flow
+- Extended Equipment.bsmx parser to handle multiple root elements
+- Enhanced enum support in models (added "Aging" to MiscUse, "Cryo" to HopForm)
+
 ## [1.0.0] - 2024-12-30
 
 ### Initial Release
@@ -57,12 +94,10 @@ All notable changes to the BeerSmith MCP Server will be documented in this file.
 
 ## Future Versions
 
-### Planned for 1.1.0
+### Planned for 1.2.0
 - Recipe update/modification support
 - Windows compatibility
 - Real-time file watching
-
-### Planned for 1.2.0
 - Recipe comparison tools
 - Batch brewing schedules
 - Enhanced water chemistry calculations
