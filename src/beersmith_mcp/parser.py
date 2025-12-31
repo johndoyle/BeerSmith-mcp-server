@@ -998,10 +998,13 @@ class BeerSmithParser:
             insert_pos = match.start()
             new_content = content[:insert_pos] + recipe_xml + content[insert_pos:]
         else:
-            # Insert at the end of the main Data section, before </Data></Recipe>
-            end_pattern = r'</Data></Recipe>\s*$'
+            # Insert at the end of the main Data section
+            # Find the pattern: </Data> followed by root-level tags like <_TExpanded>
+            # This is the closing </Data> for the main recipe container
+            end_pattern = r'</Data>\s*\n\s*<_TExpanded>'
             match = re.search(end_pattern, content)
             if match:
+                # Insert right before the </Data> tag
                 insert_pos = match.start()
                 new_content = content[:insert_pos] + recipe_xml + content[insert_pos:]
             else:
