@@ -979,34 +979,55 @@ class BeerSmithParser:
         # Read the current Recipe.bsmx file
         content = recipe_file.read_text(encoding="utf-8")
         
-        # Find the /MCP Created/ folder or create it
-        # We'll add the recipe to a special MCP folder
-        folder_name = recipe.folder or "/MCP Created/"
-        
         # Generate the recipe XML
         recipe_xml = self._generate_recipe_xml(recipe)
         
-        # Find the best place to insert the recipe
-        # Look for the Cloud folder or the end of the main Data section
-        cloud_folder_pattern = r'(<Table><_PERMID_>[^<]+</_PERMID_>[^<]*<_MOD_>[^<]+</_MOD_>[^<]*<Name>Cloud</Name>.*?<Data>)'
+        # Create a Table (folder) structure for "MCP Created" if it doesn't exist
+        # We'll wrap the recipe in a proper folder structure
+        folder_name = "MCP Created"
         
         import re
-        match = re.search(cloud_folder_pattern, content, re.DOTALL)
         
-        if match:
-            # Insert before the Cloud folder
-            insert_pos = match.start()
-            new_content = content[:insert_pos] + recipe_xml + content[insert_pos:]
+        # Check if the "MCP Created" folder already exists
+        mcp_folder_pattern = r'<Table>.*?<Name>MCP Created</Name>.*?<Data>(.*?)</Data>.*?</Table>'
+        folder_match = re.search(mcp_folder_pattern, content, re.DOTALL)
+        
+        if folder_match:
+            # Folder exists - insert the recipe into it
+            # Find the position right before the closing </Data> of the MCP Created folder
+            folder_data_end = folder_match.end(1)  # End of the Data content
+            new_content = content[:folder_data_end] + recipe_xml + content[folder_data_end:]
         else:
-            # Insert at the end of the main Data section
+            # Folder doesn't exist - create it with the recipe inside
+            folder_xml = f"""<Table><_PERMID_>9999</_PERMID_>
+<_MOD_>{datetime.now().strftime('%Y-%m-%d')}</_MOD_>
+<Name>{folder_name}</Name>
+<Type>7372</Type>
+<Dirty>1</Dirty>
+<Owndata>1</Owndata>
+<TID>9999</TID>
+<Size>1</Size>
+<_XName>Folder</_XName>
+<Allocinc>16</Allocinc>
+<Data>{recipe_xml}</Data>
+<_TExpanded>1</_TExpanded>
+<TExtra>0</TExtra>
+<TxLog>0</TxLog>
+<PermCount>0</PermCount>
+<TxCount>0</TxCount>
+<TxTable>0</TxTable>
+<TxPath></TxPath>
+</Table>
+"""
+            
+            # Insert the folder at the end of the main Data section
             # Find the pattern: </Data> followed by root-level tags like <_TExpanded>
-            # This is the closing </Data> for the main recipe container
             end_pattern = r'</Data>\s*\n\s*<_TExpanded>'
             match = re.search(end_pattern, content)
             if match:
                 # Insert right before the </Data> tag
                 insert_pos = match.start()
-                new_content = content[:insert_pos] + recipe_xml + content[insert_pos:]
+                new_content = content[:insert_pos] + folder_xml + content[insert_pos:]
             else:
                 raise ValueError("Could not find insertion point in Recipe.bsmx")
         
