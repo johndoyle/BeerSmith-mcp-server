@@ -126,7 +126,7 @@ class BeerSmithParser:
             self._cache[filename] = (mtime, root)
             return root
         except etree.XMLSyntaxError as e:
-            print(f"Error parsing {filename}: {e}")
+            # Silently handle parse errors
             return None
 
     def _element_to_dict(self, element: etree._Element) -> dict[str, Any]:
@@ -181,12 +181,8 @@ class BeerSmithParser:
                     item = model_class.model_validate(item_dict)
                     items.append(item)
                 except Exception as e:
-                    # Skip items that fail validation
-                    name = (item_dict.get("f_h_name") or item_dict.get("f_g_name") or 
-                           item_dict.get("f_y_name") or item_dict.get("f_e_name") or "unknown")
-                    # Always print validation errors for debugging
-                    import sys
-                    print(f"Warning: Failed to parse {item_tag} '{name}': {e}", file=sys.stderr)
+                    # Silently handle parse errors
+                    continue
 
         return items
 
@@ -389,7 +385,7 @@ class BeerSmithParser:
                     except Exception as e:
                         continue  # Skip malformed extra equipment
         except Exception as e:
-            print(f"Warning: Could not parse additional equipment elements: {e}")
+            pass  # Silently handle parse errors
         
         return sorted(equipment, key=lambda e: e.name)
         
@@ -418,7 +414,7 @@ class BeerSmithParser:
         profiles = []
         # Mash profiles have a more complex structure with nested steps
         for data in root.iter("Data"):
-            for mash_elem in data.findall("MashProfile"):
+            for mash_elem in data.findall("Mash"):
                 try:
                     mash_dict = self._element_to_dict(mash_elem)
                     mash = MashProfile.model_validate(mash_dict)
@@ -435,7 +431,8 @@ class BeerSmithParser:
                     
                     profiles.append(mash)
                 except Exception as e:
-                    print(f"Warning: Failed to parse mash profile: {e}")
+                    # Silently handle parse errors
+                    pass
 
         return sorted(profiles, key=lambda m: m.name)
 
@@ -469,7 +466,8 @@ class BeerSmithParser:
                     carb = Carbonation.model_validate(carb_dict)
                     profiles.append(carb)
                 except Exception as e:
-                    print(f"Warning: Failed to parse carbonation profile: {e}")
+                    # Silently handle parse errors
+                    pass
 
         return sorted(profiles, key=lambda c: c.name)
 
@@ -503,7 +501,8 @@ class BeerSmithParser:
                     age = AgeProfile.model_validate(age_dict)
                     profiles.append(age)
                 except Exception as e:
-                    print(f"Warning: Failed to parse age profile: {e}")
+                    # Silently handle parse errors
+                    pass
 
         return sorted(profiles, key=lambda a: a.name)
 
@@ -608,7 +607,7 @@ class BeerSmithParser:
 
             return recipe
         except Exception as e:
-            print(f"Warning: Failed to parse recipe: {e}")
+            # Silently handle parse errors
             return None
 
     def _find_recipes_recursive(self, element: etree._Element, folder_path: str = "/") -> list[Recipe]:

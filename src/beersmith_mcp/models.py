@@ -652,34 +652,34 @@ class RecipeSuggestion(BaseModel):
 class Carbonation(BaseModel):
     """Carbonation profile."""
 
-    id: str = Field(alias="_PERMID_", default="0")
-    name: str = Field(alias="F_C_NAME")
-    type: int = Field(alias="F_C_TYPE", default=1)  # 0=bottle, 1=keg, 2=both
-    temperature: float = Field(alias="F_C_TEMPERATURE", default=45.0)
-    primer_name: str = Field(alias="F_C_PRIMER_NAME", default="Forced Carbonation")
-    carb_rate: float = Field(alias="F_C_CARB_RATE", default=100.0)
-    notes: str = Field(alias="F_C_NOTES", default="")
+    id: str | int = Field(alias="_permid_", default="0")
+    name: str = Field(alias="f_c_name", default="Carbonation")
+    type: int = Field(alias="f_c_type", default=1)  # 0=bottle, 1=keg, 2=both
+    temperature: float = Field(alias="f_c_temperature", default=45.0)
+    primer_name: str = Field(alias="f_c_primer_name", default="Forced Carbonation")
+    carb_rate: float = Field(alias="f_c_carb_rate", default=100.0)
+    notes: str = Field(alias="f_c_notes", default="")
 
 
 class AgeProfile(BaseModel):
     """Fermentation/aging profile."""
 
-    id: str = Field(alias="_PERMID_", default="0")
-    name: str = Field(alias="F_A_NAME")
-    type: int = Field(alias="F_A_TYPE", default=0)  # 0=ale, 1=lager, 2=mead/wine, 3=cider
-    prim_temp: float = Field(alias="F_A_PRIM_TEMP", default=68.0)
-    prim_end_temp: float = Field(alias="F_A_PRIM_END_TEMP", default=68.0)
-    sec_temp: float = Field(alias="F_A_SEC_TEMP", default=68.0)
-    sec_end_temp: float = Field(alias="F_A_SEC_END_TEMP", default=68.0)
-    tert_temp: float = Field(alias="F_A_TERT_TEMP", default=68.0)
-    tert_end_temp: float = Field(alias="F_A_TERT_END_TEMP", default=68.0)
-    age_temp: float = Field(alias="F_A_AGE_TEMP", default=68.0)
-    end_age_temp: float = Field(alias="F_A_END_AGE_TEMP", default=68.0)
-    bulk_temp: float = Field(alias="F_A_BULK_TEMP", default=68.0)
-    bulk_end_temp: float = Field(alias="F_A_BULK_END_TEMP", default=68.0)
-    prim_days: float = Field(alias="F_A_PRIM_DAYS", default=7.0)
-    sec_days: float = Field(alias="F_A_SEC_DAYS", default=7.0)
-    tert_days: float = Field(alias="F_A_TERT_DAYS", default=7.0)
-    bulk_days: float = Field(alias="F_A_BULK_DAYS", default=14.0)
-    age_days: float = Field(alias="F_A_AGE", default=30.0)
+    id: str | int = Field(alias="_permid_", default="0")
+    name: str = Field(alias="f_a_name", default="Fermentation")
+    type: int = Field(alias="f_a_type", default=0)  # 0=ale, 1=lager, 2=mead/wine, 3=cider
+    prim_temp: float = Field(alias="f_a_prim_temp", default=68.0)
+    prim_end_temp: float = Field(alias="f_a_prim_end_temp", default=68.0)
+    sec_temp: float = Field(alias="f_a_sec_temp", default=68.0)
+    sec_end_temp: float = Field(alias="f_a_sec_end_temp", default=68.0)
+    tert_temp: float = Field(alias="f_a_tert_temp", default=68.0)
+    tert_end_temp: float = Field(alias="f_a_tert_end_temp", default=68.0)
+    age_temp: float = Field(alias="f_a_age_temp", default=68.0)
+    end_age_temp: float = Field(alias="f_a_end_age_temp", default=68.0)
+    bulk_temp: float = Field(alias="f_a_bulk_temp", default=68.0)
+    bulk_end_temp: float = Field(alias="f_a_bulk_end_temp", default=68.0)
+    prim_days: float = Field(alias="f_a_prim_days", default=7.0)
+    sec_days: float = Field(alias="f_a_sec_days", default=7.0)
+    tert_days: float = Field(alias="f_a_tert_days", default=7.0)
+    bulk_days: float = Field(alias="f_a_bulk_days", default=14.0)
+    age_days: float = Field(alias="f_a_age", default=30.0)
 
