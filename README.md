@@ -1,6 +1,8 @@
 # BeerSmith MCP Server
 
-A powerful MCP (Model Context Protocol) server that gives Claude Desktop direct access to your BeerSmith 3 brewing software data. Query recipes, search ingredient databases, validate recipes against BJCP style guidelines, and get intelligent recipe suggestions based on your available ingredients.
+A MCP (Model Context Protocol) server that gives Claude Desktop direct access to your BeerSmith 3 brewing software data. Query recipes, search ingredient databases, validate recipes against BJCP style guidelines, and get intelligent recipe suggestions based on your available ingredients.
+
+Beersmith 3 desktop, Apple Mac using Claude Desktop.   I also have Grocy MCP server for inventory management and so if that's needed then ping me.
 
 ## Features
 
