@@ -15,8 +15,8 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 {
   "mcpServers": {
     "beersmith": {
-      "command": "/Users/john/.local/bin/uv",
-      "args": ["--directory", "/Users/john/Development/BeerSmith MCP Server", "run", "beersmith-mcp"]
+      "command": "/Users/USERNAME/.local/bin/uv",
+      "args": ["--directory", "/Users/USERNAME/Development/BeerSmith MCP Server", "run", "beersmith-mcp"]
     }
   }
 }
@@ -72,7 +72,7 @@ Try these with Claude:
 - Check JSON syntax (no trailing commas!)
 - Restart Claude Desktop completely
 - Check logs: `~/Library/Logs/Claude/mcp-server-beersmith.log`
-- Test manually: `cd "/Users/john/Development/BeerSmith MCP Server" && /Users/john/.local/bin/uv run beersmith-mcp`
+- Test manually: `cd "/Users/USERNAME/Development/BeerSmith MCP Server" && /Users/USERNAME/.local/bin/uv run beersmith-mcp`
 
 **Recipe not found?**
 - Names are case-sensitive

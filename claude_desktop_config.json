@@ -4,7 +4,7 @@
       "command": "uv",
       "args": [
         "--directory",
-        "/Users/john/Development/BeerSmith MCP Server",
+        "/Users/USERNAME/Development/BeerSmith MCP Server",
         "run",
         "beersmith-mcp"
       ]

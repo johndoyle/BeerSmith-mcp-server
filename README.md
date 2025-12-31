@@ -62,10 +62,10 @@ Add the BeerSmith MCP server to your Claude Desktop configuration:
 {
   "mcpServers": {
     "beersmith": {
-      "command": "/Users/john/.local/bin/uv",
+      "command": "/Users/USERNAME/.local/bin/uv",
       "args": [
         "--directory",
-        "/Users/john/Development/BeerSmith MCP Server",
+        "/Users/USERNAME/Development/BeerSmith MCP Server",
         "run",
         "beersmith-mcp"
       ]
@@ -649,7 +649,7 @@ uv run beersmith-mcp
 
 1. Check config file path: `~/Library/Application Support/Claude/claude_desktop_config.json`
 2. Verify JSON is valid (no trailing commas, proper quotes)
-3. **Use full path to `uv`**: Run `which uv` and use that path in config (e.g., `/Users/john/.local/bin/uv`)
+3. **Use full path to `uv`**: Run `which uv` and use that path in config (e.g., `/Users/USERNAME/.local/bin/uv`)
 4. Restart Claude Desktop completely
 5. Check logs: `~/Library/Logs/Claude/mcp-server-beersmith.log`
 

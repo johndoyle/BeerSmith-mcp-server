@@ -5,7 +5,7 @@ description = "MCP Server for BeerSmith 3 - Read and write recipes, access ingre
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
-    { name = "John" }
+    { name = "Best Brewer" }
 ]
 dependencies = [
     "mcp>=1.0.0",
