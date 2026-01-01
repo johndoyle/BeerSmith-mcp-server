@@ -1087,7 +1087,7 @@ class BeerSmithParser:
         # Map ingredient type to file and model
         type_map = {
             'grain': ('Grain.bsmx', 'Grain', Grain),
-            'hop': ('Hop.bsmx', 'Hop', Hop),
+            'hop': ('Hops.bsmx', 'Hops', Hop),
             'yeast': ('Yeast.bsmx', 'Yeast', Yeast),
             'misc': ('Misc.bsmx', 'Misc', Misc),
         }

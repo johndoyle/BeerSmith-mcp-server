@@ -1,0 +1,27 @@
+{
+  "user_currency": "GBP",
+  "user_default_unit": "kg",
+  "beersmith_currency": "GBP",
+  "exchange_rates": {
+    "comment": "Update these rates regularly. Rates are FROM → TO (e.g., USD_to_GBP means 1 USD = X GBP)",
+    "USD_to_GBP": 0.79,
+    "GBP_to_USD": 1.27,
+    "EUR_to_GBP": 0.86,
+    "GBP_to_EUR": 1.16,
+    "USD_to_EUR": 0.92,
+    "EUR_to_USD": 1.09,
+    "CAD_to_GBP": 0.58,
+    "GBP_to_CAD": 1.72,
+    "AUD_to_GBP": 0.51,
+    "GBP_to_AUD": 1.95
+  },
+  "notes": [
+    "user_currency: Your local currency (GBP, USD, EUR, etc.)",
+    "user_default_unit: Your preferred unit system (kg for metric, lb for imperial)",
+    "beersmith_currency: The currency BeerSmith uses (match your BeerSmith settings)",
+    "Exchange rates should be updated periodically for accuracy",
+    "Grains are always stored as price per pound (lb) internally",
+    "Hops are always stored as price per ounce (oz) internally",
+    "The display currency is applied by BeerSmith when viewing prices"
+  ]
+}

@@ -104,6 +104,39 @@ If you also have the Grocy MCP server, combine them:
 
 **Important**: Restart Claude Desktop after updating the configuration.
 
+## Configuration
+
+### Currency and Units
+
+The MCP server supports automatic currency and unit conversion for ingredient prices. Edit `src/beersmith_mcp/currency_config.json` to configure:
+
+```json
+{
+  "user_currency": "GBP",
+  "user_default_unit": "kg",
+  "beersmith_currency": "GBP",
+  "exchange_rates": {
+    "USD_to_GBP": 0.79,
+    "GBP_to_USD": 1.27,
+    "EUR_to_GBP": 0.86
+  }
+}
+```
+
+**Settings**:
+- `user_currency`: Your local currency (GBP, USD, EUR, CAD, AUD, etc.)
+- `user_default_unit`: Your preferred unit system:
+  - `"kg"` for metric (default)
+  - `"lb"` for imperial
+- `beersmith_currency`: Match your BeerSmith display currency
+- `exchange_rates`: Update regularly for accurate price conversions
+
+**Important**: 
+- BeerSmith internally stores ALL prices in price per OUNCE ($/oz or £/oz)
+- This applies to grains, hops, and misc ingredients (NOT per pound!)
+- The `convert_ingredient_price` tool handles conversion automatically
+- Metric (kg) is the default - no need to use imperial units!
+
 ### Verify Installation
 
 Ask Claude: "List my brewing equipment" or "What hops are in my BeerSmith database?"
@@ -444,6 +477,45 @@ Update an ingredient's properties in the BeerSmith database.
 
 ---
 
+#### `convert_ingredient_price(price, ingredient_type, from_unit?, from_currency?, to_currency?)`
+Convert ingredient prices between different units and currencies for BeerSmith compatibility.
+
+**Parameters**:
+- `price`: The price value to convert
+- `ingredient_type`: Type of ingredient - "grain", "hop", "yeast", or "misc"
+- `from_unit` (optional): Source unit - defaults to "kg" from config
+- `from_currency` (optional): Source currency - defaults to "GBP" from config  
+- `to_currency` (optional): Target currency - defaults to "GBP" from config
+
+**Configuration**: Edit `currency_config.json` to set:
+- Your default currency (GBP, USD, EUR, etc.)
+- Your preferred unit system (kg for metric, lb for imperial)
+- Exchange rates for accurate conversions
+
+**Example**: Convert £3.75/kg grain price (using metric defaults)
+```
+convert_ingredient_price(3.75, "grain")
+```
+
+**Example**: Convert €25/kg hops with explicit currency
+```
+convert_ingredient_price(25.0, "hop", "kg", "EUR", "GBP")
+```
+
+**Returns**: 
+- Converted price with detailed calculation breakdown
+- BeerSmith-compatible value ready for `update_ingredient`
+- Both currency AND unit conversion steps shown
+
+**BeerSmith Storage Format**:
+- **ALL ingredients**: price per ounce (oz)
+- Grains: $/oz (not $/lb!)
+- Hops: $/oz
+- Misc: $/oz
+- Yeast: $ per package
+
+---
+
 #### `suggest_recipes(available_ingredients_json)`
 Suggest recipes based on available ingredients.
 
@@ -465,6 +537,43 @@ Suggest recipes based on available ingredients.
 - Recipe details (style, OG, IBU, etc.)
 
 **Minimum**: Requires 50% ingredient match to suggest a recipe
+
+---
+
+#### `sync_prices_from_grocy(grocy_products_json, threshold?, dry_run?)`
+Bulk sync ingredient prices from Grocy to BeerSmith.
+
+**Parameters**:
+- `grocy_products_json`: JSON array of Grocy products with names and prices
+- `threshold` (optional): Minimum match confidence (0.0-1.0, default 0.7)
+- `dry_run` (optional): If true (default), only show what would be updated without making changes
+
+**Example**:
+```json
+[
+  {"name": "Cascade Hops 2024", "price": 2.50, "qu_id": "oz"},
+  {"name": "Pilsner Malt", "price": 1.89, "qu_id": "lb"},
+  {"name": "US-05 Yeast", "price": 4.99, "qu_id": "pack"}
+]
+```
+
+**Optional Fields**:
+- `product_group`: Helps categorize ingredients (e.g., "hops", "grain", "yeast", "misc")
+
+**Returns**:
+- Summary of matched/unmatched products
+- Confidence scores for each match
+- List of updated ingredients (in live mode)
+- Errors if any updates failed
+
+**Workflow**:
+1. Run with `dry_run: true` (default) to preview matches
+2. Review the matched ingredients and confidence scores
+3. Run again with `dry_run: false` to apply updates
+
+**Note**: Creates automatic backup before making changes
+
+---
 
 ## Usage Examples
 
@@ -524,9 +633,20 @@ Result:
 
 You: "What recipes can I brew with my current inventory?"
 Claude: [Uses suggest_recipes with your Grocy stock]
-Result: 
+Result:
 - "American Pale Ale" (85% match, missing: Crystal 60)
 - "English Bitter" (75% match, missing: East Kent Goldings, British Ale yeast)
+
+You: "Sync my Grocy ingredient prices to BeerSmith"
+Claude: [Uses sync_prices_from_grocy to match and update prices]
+Result (dry run):
+- ✅ Cascade Hops 2024 → Cascade (hop) @ $2.50 [95% match]
+- ✅ Pilsner Malt → Pilsner (2 Row) Ger (grain) @ $1.89 [92% match]
+- ⚠️ US-05 Yeast → Safale American (yeast) @ $4.99 [85% match]
+- ❌ Irish Moss (no match found)
+
+You: "Apply those price updates"
+Claude: [Runs sync_prices_from_grocy with dry_run: false]
 ```
 
 ### Recipe Planning

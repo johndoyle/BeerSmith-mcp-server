@@ -2,6 +2,54 @@
 
 All notable changes to the BeerSmith MCP Server will be documented in this file.
 
+## [1.2.1] - 2026-01-01
+
+### Fixed
+- **CRITICAL: BeerSmith Price Storage Format Corrected**
+  - BeerSmith stores ALL prices in **price per ounce ($/oz)**, not per pound!
+  - This applies to grains, hops, and misc ingredients
+  - Fixed 35x multiplier bug where prices displayed incorrectly
+  - Updated all conversion logic to use oz as the storage unit
+  - Price conversion now works correctly: £3.75/kg → £0.1063/oz → displays as £3.75/kg ✓
+  
+- **Price Unit and Currency Conversion**: Complete rewrite of price handling for international users
+  - **Metric is now the default**: No need to convert to imperial manually
+  - **Currency conversion support**: Handles GBP, USD, EUR, CAD, AUD with configurable exchange rates
+  - **Automatic detection**: Uses `currency_config.json` for your preferred currency and units
+  - `convert_ingredient_price` now handles BOTH unit AND currency conversion
+  - Added price display to `get_grain`, `get_hop`, and `get_yeast` tools ($/lb, $/kg, $/oz formats)
+  - Added inventory display showing current stock levels
+  - Clear documentation that BeerSmith stores grains in price/lb and hops in price/oz internally
+
+### Added
+- **Currency Configuration File**: New `currency_config.json` for user preferences
+  - Set your local currency (GBP, USD, EUR, etc.)
+  - Set preferred unit system (kg for metric, lb for imperial)
+  - Configure exchange rates for accurate conversions
+  - Metric (kg) is the default setting
+- **Improved Price Conversion Tool**: `convert_ingredient_price` redesigned
+  - Defaults to metric units (kg) - no parameters needed for most users
+  - Shows step-by-step: currency conversion → unit conversion → BeerSmith format
+  - Provides ready-to-use JSON for `update_ingredient`
+  - Validates exchange rates and warns if missing
+
+### Changed
+- Enhanced `get_grain`, `get_hop`, and `get_yeast` output to include pricing and inventory section
+- Updated all documentation to use metric as the default example
+- `convert_ingredient_price` signature changed to make all parameters except price and ingredient_type optional
+
+## [1.2.0] - 2025-12-31
+
+### Added
+- **Bulk Price Sync from Grocy**: New `sync_prices_from_grocy` tool for batch updating BeerSmith ingredient prices
+  - Accepts JSON array of Grocy products with names and prices
+  - Uses fuzzy matching to map Grocy products to BeerSmith ingredients
+  - Supports dry-run mode (default) to preview changes before applying
+  - Configurable matching threshold (default 70%)
+  - Optional `product_group` field to improve matching accuracy
+  - Detailed report showing matched/unmatched items with confidence scores
+  - Automatic backup before applying changes
+
 ## [1.1.0] - 2025-12-31
 
 ### Added

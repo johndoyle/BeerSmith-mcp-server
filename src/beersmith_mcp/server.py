@@ -2,6 +2,7 @@
 
 import json
 import os
+from pathlib import Path
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
@@ -25,6 +26,24 @@ mcp = FastMCP("BeerSmith")
 # Initialize parser and matcher
 parser = BeerSmithParser()
 matcher = IngredientMatcher(parser)
+
+# Load currency configuration
+def load_currency_config():
+    """Load currency configuration from config file."""
+    config_path = Path(__file__).parent / "currency_config.json"
+    try:
+        with open(config_path, 'r') as f:
+            return json.load(f)
+    except Exception:
+        # Return defaults if config file doesn't exist or can't be read
+        return {
+            "user_currency": "GBP",
+            "user_default_unit": "kg",
+            "beersmith_currency": "GBP",
+            "exchange_rates": {}
+        }
+
+currency_config = load_currency_config()
 
 
 # === Recipe Tools ===
@@ -679,11 +698,21 @@ def get_hop(hop_name: str) -> str:
 
     substitutes = get_hop_substitutes(hop.name)
 
+    # BeerSmith stores prices in $/oz for all ingredients
+    price_per_oz = hop.price  # Stored as $/oz in BeerSmith XML
+    price_per_lb = hop.price * 16.0 if hop.price > 0 else 0
+    price_per_kg = hop.price * 35.274 if hop.price > 0 else 0
+
     lines = [
         f"# {hop.name}\n",
         f"**Origin:** {hop.origin}",
         f"**Type:** {hop.type_name}",
         f"**Form:** {hop.form_name}",
+        f"\n## Pricing & Inventory",
+        f"- **Price ($/oz):** ${price_per_oz:.4f} ← BeerSmith storage format",
+        f"- **Price ($/lb):** ${price_per_lb:.2f}",
+        f"- **Price ($/kg):** ${price_per_kg:.2f}",
+        f"- **Inventory:** {hop.inventory:.2f} oz",
         f"\n## Characteristics",
         f"- **Alpha Acid:** {hop.alpha:.1f}%",
         f"- **Beta Acid:** {hop.beta:.1f}%",
@@ -759,11 +788,22 @@ def get_grain(grain_name: str) -> str:
     if not grain:
         return f"Grain '{grain_name}' not found."
 
+    # BeerSmith stores prices in $/oz for all ingredients
+    # Calculate display prices in common units
+    price_per_oz = grain.price  # Stored as $/oz in BeerSmith XML
+    price_per_lb = grain.price * 16.0 if grain.price > 0 else 0
+    price_per_kg = grain.price * 35.274 if grain.price > 0 else 0
+
     lines = [
         f"# {grain.name}\n",
         f"**Origin:** {grain.origin}",
         f"**Supplier:** {grain.supplier or 'Not specified'}",
         f"**Type:** {grain.type_name}",
+        f"\n## Pricing & Inventory",
+        f"- **Price ($/oz):** ${price_per_oz:.4f} ← BeerSmith storage format",
+        f"- **Price ($/lb):** ${price_per_lb:.2f}",
+        f"- **Price ($/kg):** ${price_per_kg:.2f}",
+        f"- **Inventory:** {grain.inventory:.2f} oz",
         f"\n## Characteristics",
         f"- **Color:** {grain.color:.1f}°L",
         f"- **Yield:** {grain.yield_pct:.0f}%",
@@ -839,6 +879,9 @@ def get_yeast(yeast_name: str) -> str:
         f"**Product ID:** {yeast.product_id}",
         f"**Type:** {yeast.type_name}",
         f"**Form:** {yeast.form_name}",
+        f"\n## Pricing & Inventory",
+        f"- **Price:** ${yeast.price:.2f} per package",
+        f"- **Inventory:** {yeast.inventory:.0f} packages",
         f"\n## Fermentation Characteristics",
         f"- **Attenuation:** {yeast.min_attenuation:.0f}-{yeast.max_attenuation:.0f}%",
         f"- **Temperature Range:** {yeast.min_temp_c:.0f}-{yeast.max_temp_c:.0f}°C "
@@ -879,6 +922,20 @@ def update_ingredient(
                      - Hops: origin, alpha, beta, hsi (storage index)
                      - Yeast: lab, product_id, min_temp_c, max_temp_c, attenuation, tolerance
                      - Misc: use_for, type
+                     
+                     IMPORTANT - Price Storage Format:
+                     BeerSmith stores ALL ingredient prices in price per OUNCE ($/oz or £/oz).
+                     This applies to grains, hops, and misc ingredients.
+                     
+                     To convert from metric:
+                     - £/kg to £/oz: divide by 35.274
+                     - £/lb to £/oz: divide by 16.0
+                     - $/kg to $/oz: divide by 35.274
+                     
+                     Example: £3.75/kg grain = 3.75 ÷ 35.274 = £0.1063/oz
+                     Example: $20.00/kg hops = 20.00 ÷ 35.274 = $0.567/oz
+                     
+                     Use the convert_ingredient_price tool for automatic conversion.
 
     Returns:
         Success message or error details
@@ -906,6 +963,146 @@ def update_ingredient(
         return f"Error: {e}"
     except Exception as e:
         return f"Error updating ingredient: {e}"
+
+
+@mcp.tool()
+def convert_ingredient_price(
+    price: float,
+    ingredient_type: str,
+    from_unit: str | None = None,
+    from_currency: str | None = None,
+    to_currency: str | None = None
+) -> str:
+    """
+    Convert ingredient prices from your local units/currency to BeerSmith's storage format.
+    
+    BeerSmith stores prices in $/lb for grains and $/oz for hops, but displays them
+    in your configured currency. This tool handles both unit AND currency conversion.
+    
+    Uses your configured defaults from currency_config.json for units and currency.
+    
+    Args:
+        price: The price value to convert
+        ingredient_type: Type of ingredient - "grain", "hop", "yeast", or "misc"
+        from_unit: Source unit (optional, defaults to config) - "lb", "kg", "oz", "g", "pkg"
+        from_currency: Source currency (optional, defaults to config) - "USD", "GBP", "EUR", etc.
+        to_currency: BeerSmith's currency (optional, defaults to config) - typically same as from_currency
+        
+    Returns:
+        Converted price ready for BeerSmith with detailed breakdown
+        
+    Example:
+        # Convert £3.75/kg grain price (using config defaults)
+        convert_ingredient_price(3.75, "grain")
+        
+        # Convert €25/kg hops to GBP (override currency)
+        convert_ingredient_price(25.0, "hop", "kg", "EUR", "GBP")
+    """
+    # Use config defaults if not specified
+    from_unit = from_unit or currency_config.get("user_default_unit", "kg")
+    from_currency = from_currency or currency_config.get("user_currency", "GBP")
+    to_currency = to_currency or currency_config.get("beersmith_currency", "GBP")
+    
+    # Load exchange rates from config
+    config_rates = currency_config.get("exchange_rates", {})
+    exchange_rates = {}
+    
+    # Build exchange rate lookup table from config
+    for key, value in config_rates.items():
+        if "_to_" in key:
+            from_curr, to_curr = key.split("_to_")
+            exchange_rates[(from_curr, to_curr)] = value
+    
+    # Add same-currency rates
+    for curr in ["USD", "GBP", "EUR", "CAD", "AUD"]:
+        exchange_rates[(curr, curr)] = 1.0
+    
+    # Unit conversion factors (to convert FROM source TO target)
+    unit_conversions = {
+        ("kg", "lb"): 2.20462,  # kg to lb
+        ("kg", "oz"): 35.274,  # kg to oz
+        ("lb", "oz"): 16.0,  # lb to oz
+        ("g", "oz"): 1/28.3495,  # g to oz  
+        ("g", "kg"): 1/1000.0,  # g to kg
+        ("g", "lb"): 1/453.592,  # g to lb
+    }
+    
+    # IMPORTANT: BeerSmith stores ALL prices in price per OUNCE!
+    # This was confirmed by the 35x multiplier bug - BeerSmith interprets
+    # the stored value as $/oz and multiplies by 35.274 for metric display
+    beersmith_unit = "oz" if ingredient_type in ["grain", "hop", "misc"] else "pkg"
+    
+    # Step 1: Currency conversion
+    currency_rate = exchange_rates.get((from_currency, to_currency), 1.0)
+    if currency_rate == 1.0 and from_currency != to_currency:
+        return f"Error: Exchange rate not found for {from_currency} → {to_currency}. Please update currency_config.json"
+    
+    price_in_target_currency = price * currency_rate
+    
+    # Step 2: Unit conversion
+    # Price is per FROM_UNIT, we need price per TO_UNIT
+    # Example: £3.75/kg → price per lb = 3.75 / 2.20462
+    unit_key = (from_unit, beersmith_unit)
+    
+    if from_unit == beersmith_unit:
+        # No unit conversion needed
+        final_price = price_in_target_currency
+        unit_factor = 1.0
+    elif unit_key in unit_conversions:
+        # Direct conversion
+        unit_factor = unit_conversions[unit_key]
+        final_price = price_in_target_currency / unit_factor
+    else:
+        return f"Error: Cannot convert from {from_unit} to {beersmith_unit}. Supported: kg→lb, kg→oz, g→oz, g→lb, lb→oz"
+    
+    # Build detailed response
+    lines = [
+        f"# Price Conversion for {ingredient_type.title()}",
+        f"",
+        f"**Input:** {from_currency}{price:.2f}/{from_unit}",
+        f""
+    ]
+    
+    # Show currency conversion if needed
+    if from_currency != to_currency:
+        lines.extend([
+            f"## Step 1: Currency Conversion",
+            f"- {from_currency}{price:.2f} × {currency_rate:.4f} = {to_currency}{price_in_target_currency:.2f}",
+            f"- Exchange rate: 1 {from_currency} = {currency_rate:.4f} {to_currency}",
+            f"- **Note:** Update exchange_rates in code for accurate conversions",
+            f""
+        ])
+    else:
+        lines.append(f"✓ No currency conversion needed ({from_currency}={to_currency})\n")
+    
+    # Show unit conversion
+    if from_unit != beersmith_unit:
+        lines.extend([
+            f"## Step 2: Unit Conversion",
+            f"- {to_currency}{price_in_target_currency:.2f}/{from_unit} ÷ {unit_factor:.4f} = {to_currency}{final_price:.4f}/{beersmith_unit}",
+            f"- Conversion: 1 {from_unit} = {unit_factor:.4f} {beersmith_unit}",
+            f""
+        ])
+    else:
+        lines.append(f"✓ No unit conversion needed ({from_unit}={beersmith_unit})\n")
+    
+    # Final result
+    lines.extend([
+        f"## Result",
+        f"**BeerSmith Price:** {to_currency}{final_price:.4f}/{beersmith_unit}",
+        f"",
+        f"✅ Ready to use:",
+        f"```json",
+        f'{{"price": {final_price:.4f}}}',
+        f"```",
+        f"",
+        f"Update command:",
+        f"```",
+        f'update_ingredient("{ingredient_type}", "<ingredient_name>", \'{{"price": {final_price:.4f}}}\')',
+        f"```"
+    ])
+    
+    return "\n".join(lines)
 
 
 @mcp.tool()
@@ -1347,6 +1544,183 @@ def suggest_recipes(available_ingredients_json: str) -> str:
                 lines.append(f"- {missing}{sub_text}")
             if len(sugg.missing_ingredients) > 5:
                 lines.append(f"- *...and {len(sugg.missing_ingredients) - 5} more*")
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def sync_prices_from_grocy(
+    grocy_products_json: str,
+    threshold: float = 0.7,
+    dry_run: bool = True,
+) -> str:
+    """
+    Sync ingredient prices from Grocy to BeerSmith in bulk.
+
+    This tool matches Grocy products to BeerSmith ingredients using fuzzy matching,
+    then updates the BeerSmith ingredient prices based on Grocy's current prices.
+
+    Args:
+        grocy_products_json: JSON array of Grocy products with prices.
+            Each product should have: {"name": "Product Name", "price": 5.99, "qu_id": "g"}
+            Optional fields: "product_group" (to help categorize as grain/hop/yeast/misc)
+
+            Example:
+            [
+                {"name": "Cascade Hops 2024", "price": 2.50, "qu_id": "oz"},
+                {"name": "Pilsner Malt", "price": 1.89, "qu_id": "lb"},
+                {"name": "US-05 Yeast", "price": 4.99, "qu_id": "pack"}
+            ]
+
+        threshold: Minimum confidence score for matching (0.0 to 1.0, default 0.7).
+            Higher values require closer matches.
+
+        dry_run: If True (default), only show what would be updated without making changes.
+            Set to False to actually update BeerSmith ingredient prices.
+
+    Returns:
+        Summary of matched ingredients and price updates (or what would be updated in dry_run mode)
+    """
+    try:
+        grocy_products = json.loads(grocy_products_json)
+    except json.JSONDecodeError as e:
+        return f"Error parsing JSON: {e}"
+
+    if not isinstance(grocy_products, list):
+        return "Error: grocy_products_json must be a JSON array of product objects."
+
+    # Validate product structure
+    for i, product in enumerate(grocy_products):
+        if not isinstance(product, dict):
+            return f"Error: Product at index {i} is not an object."
+        if "name" not in product:
+            return f"Error: Product at index {i} is missing 'name' field."
+        if "price" not in product:
+            return f"Error: Product at index {i} is missing 'price' field."
+
+    # Results tracking
+    matched = []
+    unmatched = []
+    updated = []
+    skipped = []
+    errors = []
+
+    lines = ["# Grocy to BeerSmith Price Sync\n"]
+
+    if dry_run:
+        lines.append("**Mode: DRY RUN** (no changes will be made)\n")
+    else:
+        lines.append("**Mode: LIVE** (prices will be updated in BeerSmith)\n")
+
+    lines.append(f"Matching threshold: {threshold * 100:.0f}%\n")
+
+    # Process each Grocy product
+    for product in grocy_products:
+        product_name = product["name"]
+        product_price = float(product["price"])
+        product_unit = product.get("qu_id", "")
+        product_group = product.get("product_group", "").lower()
+
+        # Determine ingredient types to search based on product group hints
+        ingredient_types = None
+        if product_group:
+            if any(kw in product_group for kw in ["hop", "hops"]):
+                ingredient_types = ["hop"]
+            elif any(kw in product_group for kw in ["grain", "malt", "fermentable"]):
+                ingredient_types = ["grain"]
+            elif any(kw in product_group for kw in ["yeast"]):
+                ingredient_types = ["yeast"]
+            elif any(kw in product_group for kw in ["misc", "other", "additive"]):
+                ingredient_types = ["misc"]
+
+        # Use the existing matcher to find BeerSmith matches
+        matches = matcher.match_ingredient(
+            product_name,
+            ingredient_types=ingredient_types,
+            threshold=threshold,
+            limit=1,
+        )
+
+        if not matches:
+            unmatched.append({
+                "grocy_name": product_name,
+                "price": product_price,
+            })
+            continue
+
+        best_match = matches[0]
+        matched.append({
+            "grocy_name": product_name,
+            "beersmith_name": best_match.matched_name,
+            "ingredient_type": best_match.matched_type,
+            "confidence": best_match.confidence,
+            "price": product_price,
+            "unit": product_unit,
+        })
+
+        # Update BeerSmith if not a dry run
+        if not dry_run:
+            try:
+                success = parser.update_ingredient(
+                    ingredient_type=best_match.matched_type,
+                    ingredient_name=best_match.matched_name,
+                    updates={"price": product_price},
+                )
+                if success:
+                    updated.append(best_match.matched_name)
+                else:
+                    errors.append(f"{best_match.matched_name}: Update failed")
+            except Exception as e:
+                errors.append(f"{best_match.matched_name}: {str(e)}")
+
+    # Generate report
+    lines.append(f"## Summary\n")
+    lines.append(f"- **Total products:** {len(grocy_products)}")
+    lines.append(f"- **Matched:** {len(matched)}")
+    lines.append(f"- **Unmatched:** {len(unmatched)}")
+
+    if not dry_run:
+        lines.append(f"- **Updated:** {len(updated)}")
+        lines.append(f"- **Errors:** {len(errors)}")
+
+    # Show matched ingredients
+    if matched:
+        lines.append(f"\n## Matched Ingredients\n")
+        for m in sorted(matched, key=lambda x: x["confidence"], reverse=True):
+            confidence_pct = m["confidence"] * 100
+            emoji = "✅" if m["confidence"] >= 0.9 else "⚠️" if m["confidence"] >= 0.8 else "❓"
+            status = ""
+            if not dry_run:
+                if m["beersmith_name"] in updated:
+                    status = " → **UPDATED**"
+                elif any(m["beersmith_name"] in e for e in errors):
+                    status = " → **ERROR**"
+
+            lines.append(
+                f"- {emoji} **{m['grocy_name']}** → {m['beersmith_name']} "
+                f"({m['ingredient_type']}) @ ${m['price']:.2f}"
+                f" [{confidence_pct:.0f}% match]{status}"
+            )
+
+    # Show unmatched products
+    if unmatched:
+        lines.append(f"\n## Unmatched Products\n")
+        lines.append("These Grocy products could not be matched to BeerSmith ingredients:\n")
+        for u in unmatched:
+            lines.append(f"- ❌ **{u['grocy_name']}** (${u['price']:.2f})")
+
+        lines.append("\n*Tip: Try lowering the threshold or manually adding these ingredients to BeerSmith.*")
+
+    # Show errors if any
+    if errors:
+        lines.append(f"\n## Errors\n")
+        for error in errors:
+            lines.append(f"- ⚠️ {error}")
+
+    # Next steps
+    if dry_run and matched:
+        lines.append(f"\n## Next Steps\n")
+        lines.append("To apply these updates, run the command again with `dry_run: false`")
 
     return "\n".join(lines)
 
