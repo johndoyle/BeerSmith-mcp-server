@@ -100,4 +100,4 @@ Try these with Claude:
 3. Research ingredients for your next brew
 4. Connect with Grocy for inventory-based recipe suggestions
 
-Full documentation: [README.md](README.md)
+Full documentation: [README.md](../README.md)

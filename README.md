@@ -766,7 +766,12 @@ BeerSmith MCP Server/
 │       └── server.py       # MCP server with all tools
 ├── pyproject.toml          # Project config and dependencies
 ├── README.md               # This file
-└── DESIGN.md              # Architecture document
+├── docs/                   # Documentation
+│   ├── DESIGN.md          # Architecture document
+│   ├── QUICK_START.md     # Quick start guide
+│   ├── CHANGELOG.md       # Version history
+│   └── *.md               # Other documentation
+└── tests/                  # Test and debug scripts
 ```
 
 ### Running Tests
