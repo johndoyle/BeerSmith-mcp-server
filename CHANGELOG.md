@@ -146,26 +146,6 @@ All notable changes to the BeerSmith MCP Server will be documented in this file.
 
 ---
 
-## Future Versions
-
-### Planned for 1.2.0
-- Recipe update/modification support
-- Windows compatibility
-- Real-time file watching
-- Recipe comparison tools
-- Batch brewing schedules
-- Enhanced water chemistry calculations
-
-### Under Consideration
-- Linux support
-- BeerSmith Cloud integration
-- Recipe scaling and conversion tools
-- Integration with brewing equipment (Tilt, iSpindel)
-- Recipe cost calculator
-- Ingredient inventory tracking
-
----
-
 **Version Format**: [MAJOR.MINOR.PATCH]
 - MAJOR: Breaking changes
 - MINOR: New features, backwards compatible
